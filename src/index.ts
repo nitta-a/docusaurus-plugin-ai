@@ -1,5 +1,9 @@
+export type { AIModelFactory, VercelAIProviderOptions } from './ai-sdk-provider.js';
+export { createVercelAIProvider } from './ai-sdk-provider.js';
 export { AIChat } from './chat.js';
 export { createLocalAIProvider } from './local-provider.js';
+export type { OpenAIProviderOptions } from './openai-provider.js';
+export { createOpenAIProvider } from './openai-provider.js';
 export type {
   AIDocument,
   AIGenerateInput,
