@@ -1,0 +1,56 @@
+{
+  "name": "docusaurus-plugin-ai",
+  "version": "0.1.0",
+  "description": "A vendor-neutral AI foundation for Docusaurus documentation search and Q&A.",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "import": "./dist/plugin.js",
+      "require": "./dist/plugin.cjs"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup && tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "demo:build": "pnpm build && pnpm --dir demo build",
+    "demo:start": "pnpm build && pnpm --dir demo start",
+    "format": "biome format --write .",
+    "lint": "biome check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@docusaurus/types": "3.10.2",
+    "@biomejs/biome": "2.5.13",
+    "@types/node": "^22.20.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tsup": "^8.5.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  }
+}
