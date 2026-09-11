@@ -1,6 +1,6 @@
 export type { AIModelFactory, VercelAIProviderOptions } from './ai-sdk-provider.js';
 export { createVercelAIProvider } from './ai-sdk-provider.js';
-export type { MarkdownChunkOptions, RawDoc } from './build/parser.js';
+export type { ChunkOptions, MarkdownChunkOptions, RawDoc } from './build/parser.js';
 export { AIChat, AIChatSources, consumeAIStream } from './chat.js';
 export type { RAGConfig, RAGPromptContext } from './core/rag.js';
 export { createRAGProvider } from './core/rag.js';

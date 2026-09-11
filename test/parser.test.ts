@@ -89,6 +89,46 @@ export const insideCode = true;
     expect(chunks.every((chunk) => chunk.headingPath?.join('/') === '見出し')).toBe(true);
   });
 
+  it('prefers prose paragraph and sentence boundaries when splitting', () => {
+    const chunks = parseMarkdownToChunks(
+      {
+        title: 'Boundaries',
+        url: '/docs/boundaries',
+        rawMarkdown: '# Boundaries\n\nFirst sentence. Second sentence.\n\nFinal paragraph.',
+        lang: 'ja',
+      },
+      { maxChunkChars: 17 },
+    );
+
+    expect(chunks.map((chunk) => chunk.content)).toEqual(['First sentence.', 'Second sentence.', 'Final paragraph.']);
+    expect(chunks.every((chunk) => chunk.metadata?.lang === 'ja')).toBe(true);
+    expect(chunks.every((chunk) => chunk.metadata?.locale === 'ja')).toBe(true);
+  });
+
+  it('keeps code language metadata while attaching document locale', () => {
+    const chunks = parseMarkdownToChunks({
+      title: 'Code',
+      url: '/docs/code',
+      rawMarkdown: '```ts\nconst value = 1;\n```',
+      lang: 'en',
+    });
+
+    expect(chunks[0]?.metadata).toEqual({ lang: 'ts', locale: 'en' });
+  });
+
+  it('keeps Unicode boundary offsets code-point safe', () => {
+    const chunks = parseMarkdownToChunks(
+      {
+        title: 'Emoji',
+        url: '/docs/emoji',
+        rawMarkdown: `${'😀'.repeat(10)}. Next.`,
+      },
+      { maxChunkChars: 12 },
+    );
+
+    expect(chunks.map((chunk) => chunk.content)).toEqual([`${'😀'.repeat(10)}.`, 'Next.']);
+  });
+
   it('rejects invalid chunk controls instead of creating an infinite split loop', () => {
     const doc = { title: 'Invalid', url: '/docs/invalid', rawMarkdown: 'text' };
     expect(() => parseMarkdownToChunks(doc, { maxChunkChars: 0 })).toThrow('maxChunkChars');

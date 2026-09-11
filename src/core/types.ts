@@ -14,6 +14,8 @@ export interface DocumentChunk {
 
 /** Extensible, serializable metadata attached to an indexed chunk. */
 export interface DocumentChunkMetadata {
+  /** Source document locale, when supplied by the indexer. */
+  readonly locale?: string;
   readonly lang?: string;
   readonly [key: string]: string | number | boolean | undefined;
 }
