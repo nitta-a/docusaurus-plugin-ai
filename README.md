@@ -165,6 +165,33 @@ is in [`examples/azure-functions`](./examples/azure-functions/README.md). The
 adapter follows the [AI SDK Azure provider documentation](https://ai-sdk.dev/providers/ai-sdk-providers/azure)
 and the identity setup follows [Microsoft's managed identity guidance](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/managed-identity).
 
+### Amazon Bedrock with AWS Lambda
+
+The same adapter works with Amazon Bedrock without adding an AWS dependency to
+the core package. Install `@ai-sdk/amazon-bedrock` and use the AWS SDK default
+credential chain in the Lambda backend:
+
+```ts
+import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
+import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
+import { createVercelAIProvider } from 'docusaurus-plugin-ai';
+
+const bedrock = createAmazonBedrock({
+  region: process.env.AWS_REGION!,
+  credentialProvider: fromNodeProviderChain(),
+});
+
+const provider = createVercelAIProvider({
+  model: process.env.BEDROCK_MODEL ?? 'amazon.nova-lite-v1:0',
+  createModel: (modelId) => bedrock(modelId),
+});
+```
+
+Give the Lambda execution role only the Bedrock permissions it needs. The
+complete Lambda Function URL handler, including RAG, streaming, and
+`x-docusaurus-ai-sources`, is in
+[`examples/aws-bedrock`](./examples/aws-bedrock/README.md).
+
 ### Browser-to-backend HTTP provider
 
 For a static Docusaurus site, keep the Azure provider behind an application-owned

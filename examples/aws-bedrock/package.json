@@ -1,0 +1,20 @@
+{
+  "name": "docusaurus-plugin-ai-aws-bedrock-example",
+  "private": true,
+  "type": "module",
+  "main": "dist/handler.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@ai-sdk/amazon-bedrock": "latest",
+    "@aws-sdk/credential-providers": "latest",
+    "ai": "latest",
+    "docusaurus-plugin-ai": "file:../.."
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "latest",
+    "@types/node": "latest",
+    "typescript": "latest"
+  }
+}
