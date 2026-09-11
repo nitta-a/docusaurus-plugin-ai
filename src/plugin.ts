@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { basename, dirname, extname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { LoadContext, Plugin } from '@docusaurus/types';
-import { parseMarkdownToChunks } from './build/parser.js';
+import { type MarkdownChunkOptions, parseMarkdownToChunks } from './build/parser.js';
 import type { DocumentChunk } from './core/types.js';
 
 export interface DocusaurusPluginAIOptions {
@@ -12,6 +12,10 @@ export interface DocusaurusPluginAIOptions {
   docsRouteBasePath?: string;
   /** Route added by the plugin for the built-in chat page. */
   routePath?: string;
+  /** Maximum size of each indexed chunk in Unicode code points. */
+  maxChunkChars?: number;
+  /** Repeated context size between adjacent chunks. */
+  chunkOverlap?: number;
 }
 
 interface FrontMatter {
@@ -64,7 +68,11 @@ const documentUrl = (relativePath: string, routeBasePath: string, slug?: string)
   return `${routeBasePath.replace(/\/$/u, '')}/${pagePath}`.replace(/\/$/u, '') || '/';
 };
 
-export const loadDocuments = async (docsDirectory: string, docsRouteBasePath = '/docs'): Promise<DocumentChunk[]> => {
+export const loadDocuments = async (
+  docsDirectory: string,
+  docsRouteBasePath = '/docs',
+  chunkOptions: MarkdownChunkOptions = {},
+): Promise<DocumentChunk[]> => {
   const files = await walkMarkdownFiles(docsDirectory);
   const documents = await Promise.all(
     files.map(async (filePath) => {
@@ -76,11 +84,14 @@ export const loadDocuments = async (docsDirectory: string, docsRouteBasePath = '
         .split(sep)
         .join('/');
       const title = data.title ?? (basename(id).replace(/[-_]/gu, ' ') || 'Documentation');
-      return parseMarkdownToChunks({
-        title,
-        url: documentUrl(relativePath, docsRouteBasePath, data.slug),
-        rawMarkdown: body,
-      }).map((chunk) => ({
+      return parseMarkdownToChunks(
+        {
+          title,
+          url: documentUrl(relativePath, docsRouteBasePath, data.slug),
+          rawMarkdown: body,
+        },
+        chunkOptions,
+      ).map((chunk) => ({
         ...chunk,
         ...(data.description && !chunk.headingPath?.length
           ? { content: `${data.description}\n\n${chunk.content}` }
@@ -108,7 +119,10 @@ const docusaurusPluginAI = (context: LoadContext, options: DocusaurusPluginAIOpt
     name: 'docusaurus-plugin-ai',
     async loadContent() {
       return {
-        chunks: await loadDocuments(docsDirectory, docsRouteBasePath),
+        chunks: await loadDocuments(docsDirectory, docsRouteBasePath, {
+          ...(options.maxChunkChars === undefined ? {} : { maxChunkChars: options.maxChunkChars }),
+          ...(options.chunkOverlap === undefined ? {} : { chunkOverlap: options.chunkOverlap }),
+        }),
       };
     },
     async contentLoaded({ content, actions }) {

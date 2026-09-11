@@ -38,6 +38,18 @@ fenced code, tables, and heading paths as document chunks, and creates the
 chat page at `routePath`. The built-in page uses the deterministic local
 provider and does not require credentials.
 
+Long sections can be split into overlapping retrieval chunks. The values below
+are Unicode-character limits and are passed through to the Markdown parser:
+
+```js
+plugins: [[aiPlugin, {
+  docsDir: 'docs',
+  routePath: '/ai',
+  maxChunkChars: 2000,
+  chunkOverlap: 200,
+}]],
+```
+
 ## Core contracts
 
 Retrieval and generation are independent plain-object contracts:
@@ -116,6 +128,61 @@ const provider = createOpenAIProvider({
 Other AI SDK providers can use `createVercelAIProvider` with an application-owned
 model factory. Keep credentials on the server; do not bundle provider keys into
 the static Docusaurus site.
+
+### Azure OpenAI with Microsoft Entra ID
+
+The plugin deliberately does not depend on the Azure SDK. Install
+`@ai-sdk/azure` and `@azure/identity` in the server application, then pass the
+Azure model factory to the same adapter:
+
+```ts
+import { createAzure } from '@ai-sdk/azure';
+import { getBearerTokenProvider, ManagedIdentityCredential } from '@azure/identity';
+import { createVercelAIProvider } from 'docusaurus-plugin-ai';
+
+const credential = new ManagedIdentityCredential(
+  process.env.AZURE_CLIENT_ID ? { clientId: process.env.AZURE_CLIENT_ID } : undefined,
+);
+const azure = createAzure({
+  resourceName: process.env.AZURE_RESOURCE_NAME!,
+  tokenProvider: getBearerTokenProvider(
+    credential,
+    'https://cognitiveservices.azure.com/.default',
+  ),
+});
+
+const provider = createVercelAIProvider({
+  model: process.env.AZURE_OPENAI_DEPLOYMENT!,
+  createModel: (deployment) => azure.chat(deployment),
+});
+```
+
+Use `azure.chat()` when the application expects the Azure OpenAI Chat
+Completions API. Assign the Function App's system- or user-assigned managed
+identity the `Cognitive Services OpenAI User` role on the Azure OpenAI resource.
+The complete Azure Functions handler, including RAG, streaming, and role setup,
+is in [`examples/azure-functions`](./examples/azure-functions/README.md). The
+adapter follows the [AI SDK Azure provider documentation](https://ai-sdk.dev/providers/ai-sdk-providers/azure)
+and the identity setup follows [Microsoft's managed identity guidance](https://learn.microsoft.com/en-us/azure/foundry-classic/openai/how-to/managed-identity).
+
+### Browser-to-backend HTTP provider
+
+For a static Docusaurus site, keep the Azure provider behind an application-owned
+HTTP endpoint:
+
+```tsx
+import { AIChat, createHttpAIProvider } from 'docusaurus-plugin-ai';
+
+const provider = createHttpAIProvider({ endpoint: '/api/ai' });
+export const DocumentationChat = () => <AIChat provider={provider} />;
+```
+
+The provider posts `{ messages, options }`. A normal response is an
+`AIResponse` JSON object. A streaming response is plain UTF-8 text, compatible
+with `streamText().toTextStreamResponse()`. If the backend has RAG citations,
+it can expose the URL-encoded `x-docusaurus-ai-sources` response header so the
+chat surface can render sources before the first text delta. See the Azure
+Functions example for a complete handler.
 
 ## Run the Docusaurus demo
 

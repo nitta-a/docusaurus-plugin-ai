@@ -1,5 +1,6 @@
 export type { AIModelFactory, VercelAIProviderOptions } from './ai-sdk-provider.js';
 export { createVercelAIProvider } from './ai-sdk-provider.js';
+export type { MarkdownChunkOptions, RawDoc } from './build/parser.js';
 export { AIChat, AIChatSources, consumeAIStream } from './chat.js';
 export type { RAGConfig, RAGPromptContext } from './core/rag.js';
 export { createRAGProvider } from './core/rag.js';
@@ -18,6 +19,8 @@ export type {
   LLMProvider,
   SourceReference,
 } from './core/types.js';
+export type { HttpAIProviderOptions } from './http-provider.js';
+export { AI_SOURCES_HEADER, createHttpAIProvider } from './http-provider.js';
 export { createLocalAIProvider } from './local-provider.js';
 export type { OpenAIProviderOptions } from './openai-provider.js';
 export { createOpenAIProvider } from './openai-provider.js';

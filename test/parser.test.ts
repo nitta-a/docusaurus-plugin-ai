@@ -73,4 +73,26 @@ export const insideCode = true;
     expect(chunks[0]?.metadata).toEqual({ lang: 'python' });
     expect(chunks[1]).toMatchObject({ type: 'table', content: '| Value |\n| :--- |\n| kept |' });
   });
+
+  it('splits long chunks with Unicode-safe overlap while preserving metadata', () => {
+    const chunks = parseMarkdownToChunks(
+      {
+        title: 'Long section',
+        url: '/docs/long',
+        rawMarkdown: '# 見出し\n\nあいうえおかきくけこ',
+      },
+      { maxChunkChars: 6, chunkOverlap: 2 },
+    );
+
+    expect(chunks.map((chunk) => chunk.content)).toEqual(['あいうえおか', 'おかきくけこ']);
+    expect(chunks.map((chunk) => chunk.id)).toEqual(['/docs/long#chunk-0', '/docs/long#chunk-1']);
+    expect(chunks.every((chunk) => chunk.headingPath?.join('/') === '見出し')).toBe(true);
+  });
+
+  it('rejects invalid chunk controls instead of creating an infinite split loop', () => {
+    const doc = { title: 'Invalid', url: '/docs/invalid', rawMarkdown: 'text' };
+    expect(() => parseMarkdownToChunks(doc, { maxChunkChars: 0 })).toThrow('maxChunkChars');
+    expect(() => parseMarkdownToChunks(doc, { maxChunkChars: 2, chunkOverlap: 2 })).toThrow('chunkOverlap');
+    expect(() => parseMarkdownToChunks(doc, { chunkOverlap: 1 })).toThrow('requires maxChunkChars');
+  });
 });

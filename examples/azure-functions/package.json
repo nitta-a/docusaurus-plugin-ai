@@ -1,0 +1,21 @@
+{
+  "name": "docusaurus-plugin-ai-azure-functions-example",
+  "private": true,
+  "type": "module",
+  "main": "dist/functions/*.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "func start"
+  },
+  "dependencies": {
+    "@ai-sdk/azure": "latest",
+    "@azure/functions": "latest",
+    "@azure/identity": "latest",
+    "ai": "latest",
+    "docusaurus-plugin-ai": "file:../.."
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "typescript": "latest"
+  }
+}

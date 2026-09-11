@@ -6,6 +6,13 @@ export interface RawDoc {
   readonly rawMarkdown: string;
 }
 
+export interface MarkdownChunkOptions {
+  /** Maximum number of Unicode code points in a generated chunk. */
+  readonly maxChunkChars?: number;
+  /** Number of code points repeated between adjacent chunks. */
+  readonly chunkOverlap?: number;
+}
+
 interface SectionState {
   headingPath: readonly string[];
   lines: string[];
@@ -31,20 +38,55 @@ const addChunk = (
   headingPath: readonly string[],
   metadata: DocumentChunk['metadata'] | undefined,
   sequence: { value: number },
+  options: NormalizedMarkdownChunkOptions,
 ): void => {
   const normalized = type === 'code' ? content.replace(/\n+$/u, '') : content.trim();
   if (!normalized) return;
 
-  chunks.push({
-    id: `${doc.url}#chunk-${sequence.value++}`,
-    title: doc.title,
-    url: doc.url,
-    content: normalized,
-    type,
-    ...(headingPath.length ? { headingPath: [...headingPath] } : {}),
-    ...(headingPath.length ? { heading: headingPath[headingPath.length - 1] } : {}),
-    ...(metadata ? { metadata } : {}),
-  });
+  const characters = Array.from(normalized);
+  const maxChunkChars = options.maxChunkChars ?? characters.length;
+  const step = maxChunkChars - options.chunkOverlap;
+
+  let start = 0;
+  while (start < characters.length) {
+    const end = Math.min(characters.length, start + maxChunkChars);
+    const contentPart = characters.slice(start, end).join('');
+    chunks.push({
+      id: `${doc.url}#chunk-${sequence.value++}`,
+      title: doc.title,
+      url: doc.url,
+      content: contentPart,
+      type,
+      ...(headingPath.length ? { headingPath: [...headingPath] } : {}),
+      ...(headingPath.length ? { heading: headingPath[headingPath.length - 1] } : {}),
+      ...(metadata ? { metadata } : {}),
+    });
+    if (end >= characters.length) break;
+    start += step;
+  }
+};
+
+interface NormalizedMarkdownChunkOptions {
+  readonly maxChunkChars?: number;
+  readonly chunkOverlap: number;
+}
+
+const normalizeOptions = (options: MarkdownChunkOptions): NormalizedMarkdownChunkOptions => {
+  const maxChunkChars = options.maxChunkChars;
+  const chunkOverlap = options.chunkOverlap ?? 0;
+  if (maxChunkChars !== undefined && (!Number.isInteger(maxChunkChars) || maxChunkChars < 1)) {
+    throw new RangeError('maxChunkChars must be a positive integer.');
+  }
+  if (!Number.isInteger(chunkOverlap) || chunkOverlap < 0) {
+    throw new RangeError('chunkOverlap must be a non-negative integer.');
+  }
+  if (maxChunkChars === undefined && chunkOverlap > 0) {
+    throw new RangeError('chunkOverlap requires maxChunkChars to be set.');
+  }
+  if (maxChunkChars !== undefined && chunkOverlap >= maxChunkChars) {
+    throw new RangeError('chunkOverlap must be smaller than maxChunkChars.');
+  }
+  return { ...(maxChunkChars === undefined ? {} : { maxChunkChars }), chunkOverlap };
 };
 
 const updateHeadingPath = (current: readonly string[], level: number, heading: string): string[] => {
@@ -54,7 +96,8 @@ const updateHeadingPath = (current: readonly string[], level: number, heading: s
 };
 
 /** Parse Markdown/MDX into structure-preserving retrieval chunks. */
-export const parseMarkdownToChunks = (doc: RawDoc): readonly DocumentChunk[] => {
+export const parseMarkdownToChunks = (doc: RawDoc, options: MarkdownChunkOptions = {}): readonly DocumentChunk[] => {
+  const normalizedOptions = normalizeOptions(options);
   const lines = doc.rawMarkdown.split('\n');
   const chunks: DocumentChunk[] = [];
   const sequence = { value: 0 };
@@ -62,7 +105,16 @@ export const parseMarkdownToChunks = (doc: RawDoc): readonly DocumentChunk[] => 
   let headingPath: readonly string[] = [];
 
   const flushProse = (): void => {
-    addChunk(chunks, doc, 'prose', section.lines.join('\n'), section.headingPath, undefined, sequence);
+    addChunk(
+      chunks,
+      doc,
+      'prose',
+      section.lines.join('\n'),
+      section.headingPath,
+      undefined,
+      sequence,
+      normalizedOptions,
+    );
     section.lines = [];
   };
 
@@ -108,7 +160,16 @@ export const parseMarkdownToChunks = (doc: RawDoc): readonly DocumentChunk[] => 
         codeLines.push(lines[index] ?? '');
         index += 1;
       }
-      addChunk(chunks, doc, 'code', codeLines.join('\n'), section.headingPath, { lang: language || 'text' }, sequence);
+      addChunk(
+        chunks,
+        doc,
+        'code',
+        codeLines.join('\n'),
+        section.headingPath,
+        { lang: language || 'text' },
+        sequence,
+        normalizedOptions,
+      );
       continue;
     }
 
@@ -119,7 +180,16 @@ export const parseMarkdownToChunks = (doc: RawDoc): readonly DocumentChunk[] => 
         tableLines.push(lines[index] ?? '');
         index += 1;
       }
-      addChunk(chunks, doc, 'table', tableLines.join('\n'), section.headingPath, undefined, sequence);
+      addChunk(
+        chunks,
+        doc,
+        'table',
+        tableLines.join('\n'),
+        section.headingPath,
+        undefined,
+        sequence,
+        normalizedOptions,
+      );
       continue;
     }
 
