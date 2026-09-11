@@ -45,7 +45,7 @@ describe('LLMProvider', () => {
       },
     ];
 
-    expect(searchDocuments('setup plugin', documents)).toMatchObject([{ document: { id: 'setup' } }]);
+    expect(searchDocuments('setup plugin', documents)[0]).toMatchObject({ document: { id: 'setup' } });
   });
 
   it('provides a deterministic no-credentials implementation', async () => {

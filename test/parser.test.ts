@@ -28,6 +28,8 @@ const value = 1;
     expect(chunks).toHaveLength(3);
     expect(chunks[0]).toMatchObject({ type: 'prose', content: 'Introductory text.', headingPath: ['Guide'] });
     expect(chunks[1]).toMatchObject({ type: 'code', headingPath: ['Guide', 'Installation'] });
+    expect(chunks[1]?.heading).toBe('Installation');
+    expect(chunks[1]?.metadata).toEqual({ lang: 'ts' });
     expect(chunks[1]?.content).toContain('# this is code, not a heading');
     expect(chunks[2]).toMatchObject({ type: 'table', headingPath: ['Guide', 'Installation', 'Options'] });
     expect(chunks[2]?.content).toContain('| mode | fast |');
@@ -67,7 +69,8 @@ export const insideCode = true;
 `,
     });
 
-    expect(chunks[0]?.content).toContain('\n  def answer():\n    return 42');
+    expect(chunks[0]?.content).toContain('  def answer():\n    return 42');
+    expect(chunks[0]?.metadata).toEqual({ lang: 'python' });
     expect(chunks[1]).toMatchObject({ type: 'table', content: '| Value |\n| :--- |\n| kept |' });
   });
 });

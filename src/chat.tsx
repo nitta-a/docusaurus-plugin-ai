@@ -3,15 +3,15 @@ import { useState } from 'react';
 import type { AITextStream, LLMProvider, ChatMessage as ProviderMessage, SourceReference } from './core/types.js';
 
 export interface AIChatProps {
-  provider: LLMProvider;
-  title?: string;
-  description?: string;
-  placeholder?: string;
+  readonly provider: LLMProvider;
+  readonly title?: string;
+  readonly description?: string;
+  readonly placeholder?: string;
 }
 
 interface ChatMessage extends ProviderMessage {
-  id: number;
-  sources?: readonly SourceReference[];
+  readonly id: number;
+  readonly sources?: readonly SourceReference[];
 }
 
 const toAsyncIterable = async function* (stream: AITextStream): AsyncIterable<string> {
@@ -31,6 +31,35 @@ const toAsyncIterable = async function* (stream: AITextStream): AsyncIterable<st
     reader.releaseLock();
   }
 };
+
+/** Consume text deltas while exposing the accumulated response to a renderer. */
+export const consumeAIStream = async (stream: AITextStream, onText: (content: string) => void): Promise<string> => {
+  let content = '';
+  for await (const delta of toAsyncIterable(stream)) {
+    content += delta;
+    onText(content);
+  }
+  return content;
+};
+
+interface AIChatSourcesProps {
+  readonly sources: readonly SourceReference[];
+}
+
+/** Semantic citation list shared by the chat surface and its integrations. */
+export const AIChatSources = ({ sources }: AIChatSourcesProps) => (
+  <aside aria-label="参照元">
+    <strong>参照元</strong>
+    <ul>
+      {sources.map((source) => (
+        <li key={source.id}>
+          <a href={source.url}>{source.title}</a>
+          {source.snippet ? <p>{source.snippet}</p> : null}
+        </li>
+      ))}
+    </ul>
+  </aside>
+);
 
 /** A small accessible, unstyled chat surface for embedding in Docusaurus. */
 export const AIChat = ({
@@ -69,13 +98,11 @@ export const AIChat = ({
           { id: assistantId, role: 'assistant', content: '', sources: response.sources },
         ]);
 
-        let content = '';
-        for await (const delta of toAsyncIterable(response.stream)) {
-          content += delta;
+        await consumeAIStream(response.stream, (content) => {
           setMessages((current) =>
             current.map((message) => (message.id === assistantId ? { ...message, content } : message)),
           );
-        }
+        });
       } else {
         const response = await provider.generate(requestMessages);
         setMessages((current) => [
@@ -99,19 +126,7 @@ export const AIChat = ({
           <article key={message.id} data-role={message.role}>
             <strong>{message.role === 'user' ? 'You' : 'AI'}</strong>
             <p style={{ whiteSpace: 'pre-wrap' }}>{message.content}</p>
-            {message.sources && message.sources.length > 0 ? (
-              <aside aria-label="参照元">
-                <strong>参照元</strong>
-                <ul>
-                  {message.sources.map((source) => (
-                    <li key={source.id}>
-                      <a href={source.url}>{source.title}</a>
-                      <p>{source.snippet}</p>
-                    </li>
-                  ))}
-                </ul>
-              </aside>
-            ) : null}
+            {message.sources && message.sources.length > 0 ? <AIChatSources sources={message.sources} /> : null}
           </article>
         ))}
         {isLoading ? <p role="status">回答を生成しています…</p> : null}

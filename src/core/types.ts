@@ -5,12 +5,33 @@ export interface DocumentChunk {
   readonly url: string;
   readonly content: string;
   readonly type: 'prose' | 'code' | 'table';
+  /** The nearest parent heading, when the chunk belongs to a section. */
+  readonly heading?: string;
   readonly headingPath?: readonly string[];
+  readonly metadata?: DocumentChunkMetadata;
   readonly score?: number;
 }
 
+/** Extensible, serializable metadata attached to an indexed chunk. */
+export interface DocumentChunkMetadata {
+  readonly lang?: string;
+  readonly [key: string]: string | number | boolean | undefined;
+}
+
+/** A source that can be supplied as context to a RAG provider. */
+export type DocumentSource = DocumentChunk;
+
 /** Vendor-neutral context retrieval contract. */
 export interface AIRetriever {
+  /** Search the indexed context for the requested query. */
+  readonly search: (
+    query: string,
+    options?: { readonly limit?: number; readonly threshold?: number },
+  ) => Promise<readonly DocumentSource[] | readonly SourceReference[]>;
+}
+
+/** @deprecated Use AIRetriever.search. */
+export interface LegacyAIRetriever {
   readonly retrieve: (
     query: string,
     options?: { readonly limit?: number; readonly threshold?: number },
@@ -35,7 +56,7 @@ export interface SourceReference {
   readonly id: string;
   readonly title: string;
   readonly url: string;
-  readonly snippet: string;
+  readonly snippet?: string;
 }
 
 /** Token usage reported by a provider when available. */

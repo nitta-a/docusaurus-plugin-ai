@@ -56,6 +56,21 @@ describe('createRAGProvider', () => {
     expect(provider.generate).toHaveBeenCalledWith(messages, undefined);
   });
 
+  it('uses the new search contract and accepts source references', async () => {
+    const retriever = {
+      search: vi
+        .fn()
+        .mockResolvedValue([{ id: 'setup', title: 'Setup', url: '/docs/setup', snippet: 'Install the plugin.' }]),
+    };
+    const provider: LLMProvider = { generate: vi.fn().mockResolvedValue({ content: 'Answer' }) };
+    const rag = createRAGProvider({ retriever, provider });
+
+    await expect(rag.generate([{ role: 'user', content: 'How do I install it?' }])).resolves.toMatchObject({
+      sources: [{ id: 'setup', url: '/docs/setup', snippet: 'Install the plugin.' }],
+    });
+    expect(retriever.search).toHaveBeenCalledWith('How do I install it?', { limit: 5 });
+  });
+
   it('propagates retriever and provider errors', async () => {
     const retriever = { retrieve: vi.fn().mockRejectedValue(new Error('retrieval failed')) };
     const provider: LLMProvider = { generate: vi.fn() };

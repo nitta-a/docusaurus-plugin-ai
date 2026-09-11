@@ -5,6 +5,7 @@ import type {
   ChatMessage,
   DocumentChunk,
   GenerationOptions,
+  LegacyAIRetriever,
   LLMProvider,
   SourceReference,
 } from './types.js';
@@ -15,7 +16,7 @@ export interface RAGPromptContext {
 }
 
 export interface RAGConfig {
-  readonly retriever: AIRetriever;
+  readonly retriever: AIRetriever | LegacyAIRetriever;
   readonly provider: LLMProvider;
   readonly topK?: number;
   readonly buildPrompt?: (context: RAGPromptContext) => string;
@@ -51,16 +52,39 @@ const toSourceReference = (chunk: DocumentChunk): SourceReference => ({
   snippet: toSnippet(chunk.content),
 });
 
+const isDocumentChunk = (source: DocumentChunk | SourceReference): source is DocumentChunk =>
+  'content' in source && 'type' in source;
+
+const toDocumentChunk = (source: SourceReference): DocumentChunk => ({
+  id: source.id,
+  title: source.title,
+  url: source.url,
+  content: source.snippet ?? source.title,
+  type: 'prose',
+});
+
+const searchRetriever = async (
+  retriever: AIRetriever | LegacyAIRetriever,
+  query: string,
+  topK: number,
+): Promise<readonly DocumentChunk[]> => {
+  const results =
+    'search' in retriever
+      ? await retriever.search(query, { limit: topK })
+      : await retriever.retrieve(query, { limit: topK });
+  return results.map((source) => (isDocumentChunk(source) ? source : toDocumentChunk(source)));
+};
+
 const buildMessages = async (
   messages: readonly ChatMessage[],
-  retriever: AIRetriever,
+  retriever: AIRetriever | LegacyAIRetriever,
   topK: number,
   buildPrompt: (context: RAGPromptContext) => string,
 ): Promise<{ readonly composedMessages: readonly ChatMessage[]; readonly sources: readonly SourceReference[] }> => {
   const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user');
   if (!lastUserMessage) return { composedMessages: messages, sources: [] };
 
-  const chunks = await retriever.retrieve(lastUserMessage.content, { limit: topK });
+  const chunks = await searchRetriever(retriever, lastUserMessage.content, topK);
   const sources = chunks.map(toSourceReference);
   const systemMessage: ChatMessage = {
     role: 'system',

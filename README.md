@@ -46,7 +46,7 @@ Retrieval and generation are independent plain-object contracts:
 import type { AIRetriever, DocumentChunk, LLMProvider } from 'docusaurus-plugin-ai';
 
 const retriever: AIRetriever = {
-  async retrieve(query, options) {
+  async search(query, options) {
     // Search an application-owned index.
     return [] satisfies readonly DocumentChunk[];
   },

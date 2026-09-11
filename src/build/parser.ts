@@ -29,6 +29,7 @@ const addChunk = (
   type: DocumentChunk['type'],
   content: string,
   headingPath: readonly string[],
+  metadata: DocumentChunk['metadata'] | undefined,
   sequence: { value: number },
 ): void => {
   const normalized = type === 'code' ? content.replace(/\n+$/u, '') : content.trim();
@@ -41,6 +42,8 @@ const addChunk = (
     content: normalized,
     type,
     ...(headingPath.length ? { headingPath: [...headingPath] } : {}),
+    ...(headingPath.length ? { heading: headingPath[headingPath.length - 1] } : {}),
+    ...(metadata ? { metadata } : {}),
   });
 };
 
@@ -59,7 +62,7 @@ export const parseMarkdownToChunks = (doc: RawDoc): readonly DocumentChunk[] => 
   let headingPath: readonly string[] = [];
 
   const flushProse = (): void => {
-    addChunk(chunks, doc, 'prose', section.lines.join('\n'), section.headingPath, sequence);
+    addChunk(chunks, doc, 'prose', section.lines.join('\n'), section.headingPath, undefined, sequence);
     section.lines = [];
   };
 
@@ -105,14 +108,7 @@ export const parseMarkdownToChunks = (doc: RawDoc): readonly DocumentChunk[] => 
         codeLines.push(lines[index] ?? '');
         index += 1;
       }
-      addChunk(
-        chunks,
-        doc,
-        'code',
-        `Language: ${language || 'text'}\n${codeLines.join('\n').trimEnd()}`,
-        section.headingPath,
-        sequence,
-      );
+      addChunk(chunks, doc, 'code', codeLines.join('\n'), section.headingPath, { lang: language || 'text' }, sequence);
       continue;
     }
 
@@ -123,7 +119,7 @@ export const parseMarkdownToChunks = (doc: RawDoc): readonly DocumentChunk[] => 
         tableLines.push(lines[index] ?? '');
         index += 1;
       }
-      addChunk(chunks, doc, 'table', tableLines.join('\n'), section.headingPath, sequence);
+      addChunk(chunks, doc, 'table', tableLines.join('\n'), section.headingPath, undefined, sequence);
       continue;
     }
 
