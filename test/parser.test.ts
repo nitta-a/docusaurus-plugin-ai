@@ -29,7 +29,7 @@ const value = 1;
     expect(chunks[0]).toMatchObject({ type: 'prose', content: 'Introductory text.', headingPath: ['Guide'] });
     expect(chunks[1]).toMatchObject({ type: 'code', headingPath: ['Guide', 'Installation'] });
     expect(chunks[1]?.heading).toBe('Installation');
-    expect(chunks[1]?.metadata).toEqual({ lang: 'ts' });
+    expect(chunks[1]?.metadata).toEqual({ title: 'Guide', url: '/docs/guide', codeLanguage: 'ts' });
     expect(chunks[1]?.content).toContain('# this is code, not a heading');
     expect(chunks[2]).toMatchObject({ type: 'table', headingPath: ['Guide', 'Installation', 'Options'] });
     expect(chunks[2]?.content).toContain('| mode | fast |');
@@ -70,7 +70,7 @@ export const insideCode = true;
     });
 
     expect(chunks[0]?.content).toContain('  def answer():\n    return 42');
-    expect(chunks[0]?.metadata).toEqual({ lang: 'python' });
+    expect(chunks[0]?.metadata).toEqual({ title: 'Details', url: '/docs/details', codeLanguage: 'python' });
     expect(chunks[1]).toMatchObject({ type: 'table', content: '| Value |\n| :--- |\n| kept |' });
   });
 
@@ -101,7 +101,6 @@ export const insideCode = true;
     );
 
     expect(chunks.map((chunk) => chunk.content)).toEqual(['First sentence.', 'Second sentence.', 'Final paragraph.']);
-    expect(chunks.every((chunk) => chunk.metadata?.lang === 'ja')).toBe(true);
     expect(chunks.every((chunk) => chunk.metadata?.locale === 'ja')).toBe(true);
   });
 
@@ -113,7 +112,7 @@ export const insideCode = true;
       lang: 'en',
     });
 
-    expect(chunks[0]?.metadata).toEqual({ lang: 'ts', locale: 'en' });
+    expect(chunks[0]?.metadata).toEqual({ title: 'Code', url: '/docs/code', locale: 'en', codeLanguage: 'ts' });
   });
 
   it('keeps Unicode boundary offsets code-point safe', () => {

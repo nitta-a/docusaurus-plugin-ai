@@ -15,7 +15,12 @@ export interface DocumentChunk {
 /** Extensible, serializable metadata attached to an indexed chunk. */
 export interface DocumentChunkMetadata {
   /** Source document locale, when supplied by the indexer. */
+  readonly title?: string;
+  readonly url?: string;
   readonly locale?: string;
+  /** Programming language of a fenced code block, when applicable. */
+  readonly codeLanguage?: string;
+  /** @deprecated Use locale for document language and codeLanguage for code blocks. */
   readonly lang?: string;
   readonly [key: string]: string | number | boolean | undefined;
 }
@@ -82,6 +87,8 @@ export type AITextStream = AsyncIterable<string> | ReadableStream<string>;
 export interface AIStreamResponse {
   readonly stream: AITextStream;
   readonly sources?: readonly SourceReference[];
+  /** Usage may resolve after the stream has finished. */
+  readonly usage?: PromiseLike<AIUsage | undefined>;
 }
 
 /** Vendor-neutral inference/generation contract. */

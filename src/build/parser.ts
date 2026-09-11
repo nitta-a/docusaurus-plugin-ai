@@ -1,10 +1,15 @@
+import { splitProseContent } from '../core/chunker.js';
 import type { DocumentChunk } from '../core/types.js';
+
+export { type ChunkSplitOptions, splitProseContent as splitProseWithBoundaries } from '../core/chunker.js';
 
 export interface RawDoc {
   readonly title: string;
   readonly url: string;
   readonly rawMarkdown: string;
   /** Docusaurus/document locale associated with this source. */
+  readonly locale?: string;
+  /** @deprecated Use locale. Kept as an input alias for existing integrations. */
   readonly lang?: string;
 }
 
@@ -22,58 +27,6 @@ interface SectionState {
   headingPath: readonly string[];
   lines: string[];
 }
-
-const codePointOffset = (text: string, codeUnitOffset: number): number =>
-  Array.from(text.slice(0, codeUnitOffset)).length;
-
-const findOptimalBreakpoint = (characters: readonly string[], targetEnd: number, searchWindowChars: number): number => {
-  if (targetEnd >= characters.length) return characters.length;
-
-  const windowStart = Math.max(0, targetEnd - searchWindowChars);
-  const windowText = characters.slice(windowStart, targetEnd).join('');
-
-  const paragraphIndex = windowText.lastIndexOf('\n\n');
-  if (paragraphIndex >= 0) return windowStart + codePointOffset(windowText, paragraphIndex) + 2;
-
-  const sentenceMatches = [...windowText.matchAll(/[。．](?:\s*)|\.\s+/gu)];
-  const lastSentence = sentenceMatches.at(-1);
-  if (lastSentence?.index !== undefined) {
-    return windowStart + codePointOffset(windowText, lastSentence.index) + Array.from(lastSentence[0]).length;
-  }
-
-  const newlineIndex = windowText.lastIndexOf('\n');
-  if (newlineIndex >= 0) return windowStart + codePointOffset(windowText, newlineIndex) + 1;
-
-  return targetEnd;
-};
-
-/** Split prose while preferring paragraph, sentence, and line boundaries. */
-export const splitProseWithBoundaries = (text: string, options: MarkdownChunkOptions = {}): readonly string[] => {
-  const normalized = text.trim();
-  const characters = Array.from(normalized);
-  const maxChunkChars = options.maxChunkChars;
-  const chunkOverlap = options.chunkOverlap ?? 0;
-
-  if (maxChunkChars === undefined || characters.length <= maxChunkChars) return normalized ? [normalized] : [];
-
-  const result: string[] = [];
-  const searchWindowChars = Math.min(150, Math.floor(maxChunkChars * 0.25));
-  let start = 0;
-
-  while (start < characters.length) {
-    const targetEnd = Math.min(characters.length, start + maxChunkChars);
-    const end = findOptimalBreakpoint(characters, targetEnd, searchWindowChars);
-    const chunk = characters.slice(start, end).join('').trim();
-    if (chunk) result.push(chunk);
-    if (end >= characters.length) break;
-
-    // The search window is smaller than maxChunkChars, but retain this guard
-    // so future breakpoint changes can never make the loop stall.
-    start = Math.max(start + 1, end - chunkOverlap);
-  }
-
-  return result;
-};
 
 const headingPattern = /^\s{0,3}(#{1,3})\s+(.+?)\s*$/u;
 const fencePattern = /^\s{0,3}(`{3,}|~{3,})(.*)$/u;
@@ -105,7 +58,7 @@ const addChunk = (
   const step = maxChunkChars - options.chunkOverlap;
 
   if (type === 'prose' && options.maxChunkChars !== undefined) {
-    for (const contentPart of splitProseWithBoundaries(normalized, options)) {
+    for (const contentPart of splitProseContent(normalized, options)) {
       chunks.push({
         id: `${doc.url}#chunk-${sequence.value++}`,
         title: doc.title,
@@ -114,7 +67,11 @@ const addChunk = (
         type,
         ...(headingPath.length ? { headingPath: [...headingPath] } : {}),
         ...(headingPath.length ? { heading: headingPath[headingPath.length - 1] } : {}),
-        ...(doc.lang ? { metadata: { lang: doc.lang, locale: doc.lang } } : {}),
+        metadata: {
+          title: doc.title,
+          url: doc.url,
+          ...((doc.locale ?? doc.lang) ? { locale: doc.locale ?? doc.lang } : {}),
+        },
       });
     }
     return;
@@ -132,14 +89,12 @@ const addChunk = (
       type,
       ...(headingPath.length ? { headingPath: [...headingPath] } : {}),
       ...(headingPath.length ? { heading: headingPath[headingPath.length - 1] } : {}),
-      ...(metadata || doc.lang
-        ? {
-            metadata: {
-              ...(metadata ?? {}),
-              ...(doc.lang ? { ...(metadata?.lang === undefined ? { lang: doc.lang } : {}), locale: doc.lang } : {}),
-            },
-          }
-        : {}),
+      metadata: {
+        title: doc.title,
+        url: doc.url,
+        ...((doc.locale ?? doc.lang) ? { locale: doc.locale ?? doc.lang } : {}),
+        ...(metadata ?? {}),
+      },
     });
     if (end >= characters.length) break;
     start += step;
@@ -246,7 +201,7 @@ export const parseMarkdownToChunks = (doc: RawDoc, options: MarkdownChunkOptions
         'code',
         codeLines.join('\n'),
         section.headingPath,
-        { lang: language || 'text' },
+        { codeLanguage: language || 'text' },
         sequence,
         normalizedOptions,
       );

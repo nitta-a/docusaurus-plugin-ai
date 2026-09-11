@@ -24,7 +24,7 @@ describe('loadDocuments', () => {
 
     expect(chunks[0]).toMatchObject({
       url: '/docs/guide',
-      metadata: { lang: 'ja', locale: 'ja' },
+      metadata: { locale: 'ja' },
     });
   });
 });
@@ -39,8 +39,8 @@ describe('docusaurusPluginAI', () => {
 
     const content = await plugin.loadContent?.();
     expect(content?.chunks).toEqual([
-      expect.objectContaining({ content: 'First sentence.', metadata: { lang: 'en-US', locale: 'en-US' } }),
-      expect.objectContaining({ content: 'Second sentence.', metadata: { lang: 'en-US', locale: 'en-US' } }),
+      expect.objectContaining({ content: 'First sentence.', metadata: expect.objectContaining({ locale: 'en-US' }) }),
+      expect.objectContaining({ content: 'Second sentence.', metadata: expect.objectContaining({ locale: 'en-US' }) }),
     ]);
   });
 });

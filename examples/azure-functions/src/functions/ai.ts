@@ -4,6 +4,7 @@ import { app, type HttpRequest, type HttpResponseInit, type InvocationContext } 
 import { DefaultAzureCredential, getBearerTokenProvider, ManagedIdentityCredential } from '@azure/identity';
 import {
   AI_SOURCES_HEADER,
+  type AIUsage,
   type ChatMessage,
   createDocumentRetriever,
   createRAGProvider,
@@ -11,11 +12,8 @@ import {
   type GenerationOptions,
 } from 'docusaurus-plugin-ai';
 import { loadDocuments } from 'docusaurus-plugin-ai/plugin';
-
-interface RequestBody {
-  readonly messages?: unknown;
-  readonly options?: unknown;
-}
+import { logAICallMetrics } from '../telemetry.js';
+import { AIRequestValidationError, validateAIRequest } from '../validation.js';
 
 const required = (name: string): string => {
   const value = process.env[name];
@@ -50,41 +48,12 @@ const rag = createRAGProvider({
   provider,
 });
 
-const isChatMessage = (value: unknown): value is ChatMessage => {
-  if (!value || typeof value !== 'object') return false;
-  const message = value as Record<string, unknown>;
-  return (
-    (message.role === 'system' || message.role === 'user' || message.role === 'assistant') &&
-    typeof message.content === 'string'
-  );
-};
-
-const parseBody = (body: RequestBody): { messages: readonly ChatMessage[]; options?: GenerationOptions } => {
-  if (!Array.isArray(body.messages) || !body.messages.every(isChatMessage)) {
-    throw new Error('Request body must contain a messages array.');
-  }
-
-  if (body.options === undefined) return { messages: body.messages };
-  if (!body.options || typeof body.options !== 'object') throw new Error('Request options must be an object.');
-  const options = body.options as Record<string, unknown>;
-  const temperature = options.temperature;
-  const maxTokens = options.maxTokens;
-  if (temperature !== undefined && (typeof temperature !== 'number' || !Number.isFinite(temperature))) {
-    throw new Error('options.temperature must be a finite number.');
-  }
-  if (maxTokens !== undefined && (!Number.isInteger(maxTokens) || maxTokens < 1)) {
-    throw new Error('options.maxTokens must be a positive integer.');
-  }
-  return {
-    messages: body.messages,
-    options: {
-      ...(temperature === undefined ? {} : { temperature }),
-      ...(maxTokens === undefined ? {} : { maxTokens }),
-    },
-  };
-};
-
-const streamResponse = async (messages: readonly ChatMessage[], options?: GenerationOptions) => {
+const streamResponse = async (
+  messages: readonly ChatMessage[],
+  options: GenerationOptions | undefined,
+  context: InvocationContext,
+  startedAt: number,
+) => {
   if (!rag.stream) throw new Error('The configured provider does not support streaming.');
   const result = await rag.stream(messages, options);
   const encoder = new TextEncoder();
@@ -95,6 +64,19 @@ const streamResponse = async (messages: readonly ChatMessage[], options?: Genera
         controller.close();
       } catch (error) {
         controller.error(error);
+      } finally {
+        let usage: AIUsage | undefined;
+        try {
+          usage = result.usage ? await result.usage : undefined;
+        } catch (error) {
+          context.error(error);
+        }
+        logAICallMetrics(context, {
+          latencyMs: Date.now() - startedAt,
+          ...usage,
+          sourcesCount: result.sources?.length ?? 0,
+          isStream: true,
+        });
       }
     },
   });
@@ -111,19 +93,29 @@ const streamResponse = async (messages: readonly ChatMessage[], options?: Genera
 };
 
 export async function ai(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  const startedAt = Date.now();
   try {
-    const body = (await request.json()) as RequestBody;
-    const parsed = parseBody(body);
+    const parsed = validateAIRequest(await request.json());
     if (request.headers.get('accept')?.includes('text/plain')) {
-      return await streamResponse(parsed.messages, parsed.options);
+      return await streamResponse(parsed.messages, parsed.options, context, startedAt);
     }
 
     const response = await rag.generate(parsed.messages, parsed.options);
+    logAICallMetrics(
+      context,
+      {
+        latencyMs: Date.now() - startedAt,
+        ...response.usage,
+        sourcesCount: response.sources?.length ?? 0,
+        isStream: false,
+      },
+      response.model ? { model: response.model } : {},
+    );
     return { status: 200, jsonBody: response };
   } catch (error) {
     context.error(error);
     return {
-      status: error instanceof Error && error.message.startsWith('Request') ? 400 : 500,
+      status: error instanceof AIRequestValidationError || error instanceof SyntaxError ? 400 : 500,
       jsonBody: { error: error instanceof Error ? error.message : 'AI request failed.' },
     };
   }

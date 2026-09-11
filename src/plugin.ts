@@ -18,6 +18,7 @@ interface FrontMatter {
   title?: string;
   description?: string;
   slug?: string;
+  locale?: string;
   lang?: string;
 }
 
@@ -38,7 +39,8 @@ const readFrontMatter = (source: string): { data: FrontMatter; body: string } =>
     if (separator < 0) continue;
     const key = line.slice(0, separator).trim();
     const value = parseScalar(line.slice(separator + 1));
-    if (key === 'title' || key === 'description' || key === 'slug' || key === 'lang') data[key] = value;
+    if (key === 'title' || key === 'description' || key === 'slug' || key === 'locale' || key === 'lang')
+      data[key] = value;
   }
   return { data, body: source.slice(end + 4) };
 };
@@ -87,7 +89,7 @@ export const loadDocuments = async (
           title,
           url: documentUrl(relativePath, docsRouteBasePath, data.slug),
           rawMarkdown: body,
-          ...((data.lang ?? locale) ? { lang: data.lang ?? locale } : {}),
+          ...((data.locale ?? data.lang ?? locale) ? { locale: data.locale ?? data.lang ?? locale } : {}),
         },
         chunkOptions,
       ).map((chunk) => ({

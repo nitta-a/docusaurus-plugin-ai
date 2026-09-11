@@ -73,3 +73,23 @@ The endpoint accepts `{ messages, options }`, returns `AIResponse` JSON for
 normal requests, and returns the AI SDK text stream for requests whose
 `Accept` header includes `text/plain`. Streaming citations are sent in the
 URL-encoded `x-docusaurus-ai-sources` response header.
+
+## Security and operations
+
+`src/validation.ts` rejects empty or oversized prompts, more than 20 messages,
+`maxTokens` values above 2000, and temperatures outside `0..2`. The handler
+uses these limits before invoking Azure OpenAI. `src/telemetry.ts` writes
+structured latency, token usage, source-count, and streaming metrics to the
+Function invocation log, which Application Insights ingests automatically.
+
+When the frontend is deployed to Azure Static Web Apps, copy
+`staticwebapp.config.json` into the deployed site output. It requires Entra ID
+authentication for `/api/*` and redirects unauthenticated users to the Azure
+AD login route. Keep `/api/*` excluded from the Docusaurus SPA fallback.
+
+Deployment checklist:
+
+1. Place `staticwebapp.config.json` in the Static Web Apps output and enable Entra ID authentication.
+2. Keep `validateAIRequest` enabled so message count, prompt length, `maxTokens`, and `temperature` limits are enforced.
+3. Use `locale` for document language and `codeLanguage` only for fenced-code language metadata.
+4. Load documents with `maxChunkChars` and `chunkOverlap` so prose is split at natural boundaries.

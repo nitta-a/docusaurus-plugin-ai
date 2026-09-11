@@ -24,4 +24,6 @@ plugins: [['docusaurus-plugin-ai', {
 ```
 
 The limits count Unicode code points, and every split chunk keeps its source
-URL, heading path, type, and code-language metadata.
+URL, heading path, type, and metadata. Document language is stored as
+`metadata.locale`; fenced-code language is stored separately as
+`metadata.codeLanguage`.

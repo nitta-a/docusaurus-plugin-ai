@@ -121,12 +121,16 @@ describe('LLMProvider', () => {
       yield 'Hello';
       yield ' world';
     })();
-    streamTextMock.mockReturnValue({ textStream });
+    streamTextMock.mockReturnValue({
+      textStream,
+      usage: Promise.resolve({ inputTokens: 4, outputTokens: 3, totalTokens: 7 }),
+    });
 
     const provider = createVercelAIProvider({ model: 'test-model', createModel: () => ({ provider: 'test' }) });
     const response = await provider.stream?.([{ role: 'user', content: 'Hello?' }], { temperature: 0.2 });
 
     expect(response?.sources).toBeUndefined();
+    await expect(response?.usage).resolves.toEqual({ promptTokens: 4, completionTokens: 3, totalTokens: 7 });
     await expect(response ? collect(response.stream) : Promise.reject(new Error('stream unavailable'))).resolves.toBe(
       'Hello world',
     );

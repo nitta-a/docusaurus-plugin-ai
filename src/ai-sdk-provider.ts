@@ -94,7 +94,10 @@ export const createVercelAIProvider = ({
         ...resolveOptions(options),
       });
 
-      return { stream: result.textStream };
+      return {
+        stream: result.textStream,
+        usage: Promise.resolve(result.usage).then(normalizeUsage),
+      };
     },
   };
 };
