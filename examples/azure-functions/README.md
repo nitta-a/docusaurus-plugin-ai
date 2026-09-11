@@ -77,10 +77,22 @@ URL-encoded `x-docusaurus-ai-sources` response header.
 ## Security and operations
 
 `src/validation.ts` rejects empty or oversized prompts, more than 20 messages,
-`maxTokens` values above 2000, and temperatures outside `0..2`. The handler
+`maxTokens` values above 2000, temperatures outside `0..2`, and total prompt
+content above 20,000 characters. Safe defaults of 800 output tokens and a
+temperature of `0.2` are applied when callers omit those controls. The handler
 uses these limits before invoking Azure OpenAI. `src/telemetry.ts` writes
-structured latency, token usage, source-count, and streaming metrics to the
-Function invocation log, which Application Insights ingests automatically.
+query-scoped RAG events with retrieval duration, total duration, source
+references, token usage, and success/error status to the Function invocation
+log, which Application Insights ingests automatically.
+
+The sample Function intentionally uses `authLevel: 'anonymous'` because it is
+designed to run behind Azure Static Web Apps (SWA). SWA terminates Microsoft
+Entra ID authentication and the accompanying `staticwebapp.config.json`
+requires the `authenticated` role for `/api/*` before requests reach the
+Function. If you deploy the Function independently, change `authLevel` to
+`'function'` or put an authenticated gateway such as Azure API Management in
+front of it; the SWA route configuration does not protect a standalone
+Function App.
 
 When the frontend is deployed to Azure Static Web Apps, copy
 `staticwebapp.config.json` into the deployed site output. It requires Entra ID

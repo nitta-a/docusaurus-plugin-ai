@@ -17,8 +17,24 @@ describe('validateAIRequest', () => {
   it('also accepts flat generation controls during migration', () => {
     expect(validateAIRequest({ messages: [{ role: 'user', content: 'question' }], maxTokens: 64 })).toEqual({
       messages: [{ role: 'user', content: 'question' }],
-      options: { maxTokens: 64 },
+      options: { maxTokens: 64, temperature: 0.2 },
     });
+  });
+
+  it('applies bounded defaults and rejects an oversized total prompt', () => {
+    expect(validateAIRequest({ messages: [{ role: 'user', content: 'question' }] })).toEqual({
+      messages: [{ role: 'user', content: 'question' }],
+      options: { maxTokens: 800, temperature: 0.2 },
+    });
+    expect(() =>
+      validateAIRequest({
+        messages: [
+          { role: 'user', content: 'x'.repeat(DEFAULT_CONSTRAINTS.maxMessageLength) },
+          { role: 'assistant', content: 'y'.repeat(DEFAULT_CONSTRAINTS.maxMessageLength) },
+          { role: 'user', content: 'z'.repeat(DEFAULT_CONSTRAINTS.maxMessageLength) },
+        ],
+      }),
+    ).toThrow('total message content exceeds limit');
   });
 
   it('rejects oversized messages and generation controls', () => {

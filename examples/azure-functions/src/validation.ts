@@ -8,16 +8,27 @@ type GenerationOptions = {
   readonly maxTokens?: number;
 };
 
+export interface ValidatedAIRequest {
+  readonly messages: readonly ChatMessage[];
+  readonly options: GenerationOptions;
+}
+
 export interface ValidationConstraints {
   readonly maxTokensLimit: number;
   readonly maxMessagesCount: number;
   readonly maxMessageLength: number;
+  readonly maxTotalMessageLength: number;
+  readonly defaultMaxTokens: number;
+  readonly defaultTemperature: number;
 }
 
 export const DEFAULT_CONSTRAINTS: ValidationConstraints = {
   maxTokensLimit: 2000,
   maxMessagesCount: 20,
-  maxMessageLength: 4000,
+  maxMessageLength: 8000,
+  maxTotalMessageLength: 20000,
+  defaultMaxTokens: 800,
+  defaultTemperature: 0.2,
 };
 
 export class AIRequestValidationError extends Error {
@@ -33,7 +44,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 export const validateAIRequest = (
   body: unknown,
   constraints: ValidationConstraints = DEFAULT_CONSTRAINTS,
-): { readonly messages: readonly ChatMessage[]; readonly options?: GenerationOptions } => {
+): ValidatedAIRequest => {
   if (!isRecord(body)) throw invalid('request body must be a JSON object.');
 
   const messages = body.messages;
@@ -45,6 +56,7 @@ export const validateAIRequest = (
   }
 
   const validatedMessages: ChatMessage[] = [];
+  let totalMessageLength = 0;
   for (const [index, value] of messages.entries()) {
     if (!isRecord(value)) throw invalid(`message at index ${index} is invalid.`);
     const role = value.role;
@@ -57,6 +69,10 @@ export const validateAIRequest = (
     }
     if (content.length > constraints.maxMessageLength) {
       throw invalid(`message at index ${index} exceeds length limit of ${constraints.maxMessageLength} characters.`);
+    }
+    totalMessageLength += content.length;
+    if (totalMessageLength > constraints.maxTotalMessageLength) {
+      throw invalid(`total message content exceeds limit of ${constraints.maxTotalMessageLength} characters.`);
     }
     validatedMessages.push({ role, content });
   }
@@ -85,14 +101,14 @@ export const validateAIRequest = (
     throw invalid('options.temperature must be a finite number between 0 and 2.');
   }
 
-  const validatedMaxTokens = maxTokens === undefined ? undefined : (maxTokens as number);
-  const validatedTemperature = temperature === undefined ? undefined : temperature;
+  const validatedMaxTokens = maxTokens === undefined ? constraints.defaultMaxTokens : (maxTokens as number);
+  const validatedTemperature = temperature === undefined ? constraints.defaultTemperature : temperature;
   const validatedOptions: GenerationOptions = {
-    ...(validatedMaxTokens === undefined ? {} : { maxTokens: validatedMaxTokens }),
-    ...(validatedTemperature === undefined ? {} : { temperature: validatedTemperature }),
+    maxTokens: validatedMaxTokens,
+    temperature: validatedTemperature,
   };
   return {
     messages: validatedMessages,
-    ...(Object.keys(validatedOptions).length > 0 ? { options: validatedOptions } : {}),
+    options: validatedOptions,
   };
 };

@@ -38,6 +38,12 @@ fenced code, tables, and heading paths as document chunks, and creates the
 chat page at `routePath`. The built-in page uses the deterministic local
 provider and does not require credentials.
 
+Document metadata keeps the natural-language `locale` separate from fenced
+code syntax: `metadata.locale` comes from document front matter (`locale` or
+legacy `lang`) and falls back to Docusaurus's `i18n.currentLocale`, while
+`metadata.codeLanguage` contains values such as `typescript` or `json` only
+for code chunks.
+
 Long sections can be split into overlapping retrieval chunks. The values below
 are Unicode-character limits and are passed through to the Markdown parser:
 
@@ -210,6 +216,16 @@ with `streamText().toTextStreamResponse()`. If the backend has RAG citations,
 it can expose the URL-encoded `x-docusaurus-ai-sources` response header so the
 chat surface can render sources before the first text delta. See the Azure
 Functions example for a complete handler.
+
+#### Azure Static Web Apps authentication boundary
+
+The Azure Functions example uses `authLevel: 'anonymous'` because the sample
+is intended to sit behind Azure Static Web Apps. Its
+[`staticwebapp.config.json`](./examples/azure-functions/staticwebapp.config.json)
+requires the `authenticated` role for `/api/*` and redirects unauthenticated
+users to Microsoft Entra ID. A standalone Function App is not protected by
+that file: deploy it with `authLevel: 'function'` or enforce authentication at
+an API gateway such as Azure API Management.
 
 ## Run the Docusaurus demo
 

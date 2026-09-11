@@ -1,4 +1,34 @@
 import type { InvocationContext } from '@azure/functions';
+import type { SourceReference } from 'docusaurus-plugin-ai';
+
+export interface RAGLogEntry {
+  readonly traceId: string;
+  readonly query: string;
+  readonly retrievedCount: number;
+  readonly sources: readonly Pick<SourceReference, 'title' | 'url'>[];
+  readonly durationMs: {
+    readonly retrieval: number;
+    readonly total: number;
+  };
+  readonly usage?: {
+    readonly promptTokens?: number;
+    readonly completionTokens?: number;
+    readonly totalTokens?: number;
+  };
+  readonly status: 'success' | 'error';
+  readonly errorMessage?: string;
+}
+
+/** Emit one query-scoped event so retrieval and generation failures can be separated in Application Insights. */
+export const logRAGTelemetry = (context: InvocationContext, entry: RAGLogEntry): void => {
+  context.log(
+    JSON.stringify({
+      telemetryType: 'RAG_EXECUTION',
+      ...entry,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+};
 
 export interface TelemetryMetrics {
   readonly latencyMs: number;

@@ -27,6 +27,13 @@ describe('loadDocuments', () => {
       metadata: { locale: 'ja' },
     });
   });
+
+  it('prioritizes document front matter locale over the build locale', async () => {
+    const directory = await createDocs(`---\nlocale: ja\n---\n\n\`\`\`typescript\nconst value = 1;\n\`\`\``);
+    const chunks = await loadDocuments(directory, '/docs', {}, 'en-US');
+
+    expect(chunks[0]?.metadata).toMatchObject({ locale: 'ja', codeLanguage: 'typescript' });
+  });
 });
 
 describe('docusaurusPluginAI', () => {
