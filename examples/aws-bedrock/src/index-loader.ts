@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
-import type { DocumentChunk } from 'docusaurus-plugin-ai';
-import { loadDocuments } from 'docusaurus-plugin-ai/plugin';
+import type { DocumentChunk } from '@docusaurus-plugin-ai/core';
+import { loadDocuments } from '@docusaurus-plugin-ai/core/plugin';
 
 let cachedDocuments: readonly DocumentChunk[] | undefined;
 

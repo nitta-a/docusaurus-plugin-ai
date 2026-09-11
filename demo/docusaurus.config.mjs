@@ -1,4 +1,4 @@
-import aiPlugin from 'docusaurus-plugin-ai/plugin';
+import aiPlugin from '@docusaurus-plugin-ai/core/plugin';
 import { themes as prismThemes } from 'prism-react-renderer';
 
 /** @type {import('@docusaurus/types').Config} */

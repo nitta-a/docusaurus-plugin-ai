@@ -1,5 +1,5 @@
 import type { InvocationContext } from '@azure/functions';
-import type { SourceReference } from 'docusaurus-plugin-ai';
+import type { SourceReference } from '@docusaurus-plugin-ai/core';
 
 export interface RAGLogEntry {
   readonly traceId: string;

@@ -1,6 +1,6 @@
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
-import { createVercelAIProvider, type LLMProvider } from 'docusaurus-plugin-ai';
+import { createVercelAIProvider, type LLMProvider } from '@docusaurus-plugin-ai/core';
 
 export interface BedrockConfig {
   readonly region: string;

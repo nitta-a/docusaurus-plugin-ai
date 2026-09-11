@@ -1,5 +1,5 @@
 {
-  "name": "docusaurus-plugin-ai",
+  "name": "@docusaurus-plugin-ai/core",
   "version": "0.1.0",
   "packageManager": "pnpm@11.24.0",
   "description": "A vendor-neutral AI foundation for Docusaurus documentation search and Q&A.",

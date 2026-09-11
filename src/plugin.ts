@@ -118,7 +118,7 @@ const docusaurusPluginAI = (context: LoadContext, options: DocusaurusPluginAIOpt
   const currentLocale = context.i18n?.currentLocale;
 
   return {
-    name: 'docusaurus-plugin-ai',
+    name: '@docusaurus-plugin-ai/core',
     async loadContent() {
       return {
         chunks: await loadDocuments(

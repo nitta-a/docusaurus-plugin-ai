@@ -1,4 +1,4 @@
-# docusaurus-plugin-ai
+# @docusaurus-plugin-ai/core
 
 Vendor-neutral AI foundations for Docusaurus documentation.
 
@@ -25,7 +25,7 @@ pnpm build
 
 Releases are published from `v*.*.*` tags after the same checks run in CI.
 The GitHub repository needs an `NPM_TOKEN` secret with permission to publish
-`docusaurus-plugin-ai`; the workflow also enables npm provenance and creates a
+`@docusaurus-plugin-ai/core`; the workflow also enables npm provenance and creates a
 GitHub Release.
 
 ```bash
@@ -47,7 +47,7 @@ tarball or the package's runtime dependency graph.
 Add the plugin to `docusaurus.config.mjs`:
 
 ```js
-import aiPlugin from 'docusaurus-plugin-ai/plugin';
+import aiPlugin from '@docusaurus-plugin-ai/core/plugin';
 
 export default {
   plugins: [[aiPlugin, { docsDir: 'docs', routePath: '/ai' }]],
@@ -82,7 +82,7 @@ plugins: [[aiPlugin, {
 Retrieval and generation are independent plain-object contracts:
 
 ```ts
-import type { AIRetriever, DocumentChunk, LLMProvider } from 'docusaurus-plugin-ai';
+import type { AIRetriever, DocumentChunk, LLMProvider } from '@docusaurus-plugin-ai/core';
 
 const retriever: AIRetriever = {
   async search(query, options) {
@@ -102,7 +102,7 @@ const provider: LLMProvider = {
 Compose them with `createRAGProvider`:
 
 ```ts
-import { createRAGProvider } from 'docusaurus-plugin-ai';
+import { createRAGProvider } from '@docusaurus-plugin-ai/core';
 
 const ragProvider = createRAGProvider({
   retriever,
@@ -144,7 +144,7 @@ if (response) {
 The package includes a server-side OpenAI adapter backed by the Vercel AI SDK:
 
 ```ts
-import { createOpenAIProvider } from 'docusaurus-plugin-ai';
+import { createOpenAIProvider } from '@docusaurus-plugin-ai/core';
 
 const provider = createOpenAIProvider({
   model: 'gpt-4o-mini',
@@ -165,7 +165,7 @@ Azure model factory to the same adapter:
 ```ts
 import { createAzure } from '@ai-sdk/azure';
 import { getBearerTokenProvider, ManagedIdentityCredential } from '@azure/identity';
-import { createVercelAIProvider } from 'docusaurus-plugin-ai';
+import { createVercelAIProvider } from '@docusaurus-plugin-ai/core';
 
 const credential = new ManagedIdentityCredential(
   process.env.AZURE_CLIENT_ID ? { clientId: process.env.AZURE_CLIENT_ID } : undefined,
@@ -201,7 +201,7 @@ credential chain in the Lambda backend:
 ```ts
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
-import { createVercelAIProvider } from 'docusaurus-plugin-ai';
+import { createVercelAIProvider } from '@docusaurus-plugin-ai/core';
 
 const bedrock = createAmazonBedrock({
   region: process.env.AWS_REGION!,
@@ -225,7 +225,7 @@ For a static Docusaurus site, keep the Azure provider behind an application-owne
 HTTP endpoint:
 
 ```tsx
-import { AIChat, createHttpAIProvider } from 'docusaurus-plugin-ai';
+import { AIChat, createHttpAIProvider } from '@docusaurus-plugin-ai/core';
 
 const provider = createHttpAIProvider({ endpoint: '/api/ai' });
 export const DocumentationChat = () => <AIChat provider={provider} />;

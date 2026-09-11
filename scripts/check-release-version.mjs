@@ -12,4 +12,4 @@ if (tagVersion !== packageJson.version) {
   throw new Error(`Release tag ${tag} does not match package.json version ${packageJson.version}.`);
 }
 
-console.log(`Release tag ${tag} matches docusaurus-plugin-ai@${packageJson.version}.`);
+console.log(`Release tag ${tag} matches ${packageJson.name}@${packageJson.version}.`);

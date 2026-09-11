@@ -12,8 +12,8 @@ import {
   createRAGProvider,
   createVercelAIProvider,
   type GenerationOptions,
-} from 'docusaurus-plugin-ai';
-import { loadDocuments } from 'docusaurus-plugin-ai/plugin';
+} from '@docusaurus-plugin-ai/core';
+import { loadDocuments } from '@docusaurus-plugin-ai/core/plugin';
 import { logAICallMetrics, logRAGTelemetry } from '../telemetry.js';
 import { AIRequestValidationError, validateAIRequest } from '../validation.js';
 

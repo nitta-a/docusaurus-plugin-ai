@@ -1,11 +1,11 @@
-import type { Context } from 'aws-lambda';
 import {
   AI_SOURCES_HEADER,
   type ChatMessage,
   createDocumentRetriever,
   createRAGProvider,
   type GenerationOptions,
-} from 'docusaurus-plugin-ai';
+} from '@docusaurus-plugin-ai/core';
+import type { Context } from 'aws-lambda';
 import { loadIndex } from './index-loader.js';
 import { initBedrockProvider } from './provider.js';
 

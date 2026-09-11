@@ -12,7 +12,7 @@
     "@azure/functions": "latest",
     "@azure/identity": "latest",
     "ai": "latest",
-    "docusaurus-plugin-ai": "file:../.."
+    "@docusaurus-plugin-ai/core": "file:../.."
   },
   "devDependencies": {
     "@types/node": "latest",

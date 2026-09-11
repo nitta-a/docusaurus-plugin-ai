@@ -62,7 +62,7 @@ The endpoint is `http://localhost:7071/api/ai`.
 ## Browser provider
 
 ```tsx
-import { AIChat, createHttpAIProvider } from 'docusaurus-plugin-ai';
+import { AIChat, createHttpAIProvider } from '@docusaurus-plugin-ai/core';
 
 export function DocumentationChat() {
   return <AIChat provider={createHttpAIProvider({ endpoint: '/api/ai' })} />;

@@ -16,7 +16,7 @@ service, or compose an `AIRetriever` and `LLMProvider` with `createRAGProvider`.
 For long sections, configure bounded overlapping chunks in the plugin options:
 
 ```js
-plugins: [['docusaurus-plugin-ai', {
+plugins: [['@docusaurus-plugin-ai/core/plugin', {
   docsDir: 'docs',
   maxChunkChars: 2000,
   chunkOverlap: 200,
