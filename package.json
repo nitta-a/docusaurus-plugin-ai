@@ -34,6 +34,7 @@
     "demo:start": "pnpm build && pnpm --dir demo start",
     "format": "biome format --write .",
     "format:check": "biome format .",
+    "audit:prod": "pnpm audit --prod",
     "lint": "biome check .",
     "release:check": "node scripts/check-release-version.mjs",
     "test": "vitest run",

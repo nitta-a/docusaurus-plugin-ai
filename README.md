@@ -37,6 +37,11 @@ The tag must exactly match `package.json#version`. The publish job is
 idempotent: if that exact version is already on npm, publishing is skipped and
 the package is still checked for registry availability.
 
+The release checks audit only production dependencies because the private
+Docusaurus demo is a build-time workspace project. Its current `image-size`
+advisories have no upstream patched version; they are not included in the npm
+tarball or the package's runtime dependency graph.
+
 ## Docusaurus plugin
 
 Add the plugin to `docusaurus.config.mjs`:
