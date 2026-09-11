@@ -21,6 +21,22 @@ pnpm test
 pnpm build
 ```
 
+## Release
+
+Releases are published from `v*.*.*` tags after the same checks run in CI.
+The GitHub repository needs an `NPM_TOKEN` secret with permission to publish
+`docusaurus-plugin-ai`; the workflow also enables npm provenance and creates a
+GitHub Release.
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The tag must exactly match `package.json#version`. The publish job is
+idempotent: if that exact version is already on npm, publishing is skipped and
+the package is still checked for registry availability.
+
 ## Docusaurus plugin
 
 Add the plugin to `docusaurus.config.mjs`:

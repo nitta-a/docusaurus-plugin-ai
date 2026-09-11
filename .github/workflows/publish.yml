@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          package-manager-cache: false
+
+      - name: Set up pnpm
+        uses: pnpm/setup@v2
+        with:
+          version: 11.24.0
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Build Docusaurus demo
+        run: pnpm demo:build
+
+      - name: Check release tag version
+        run: pnpm release:check "${{ github.ref_name }}"
+
+  publish:
+    name: Publish package and GitHub Release
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22.x
+          package-manager-cache: false
+          registry-url: https://registry.npmjs.org
+
+      - name: Set up pnpm
+        uses: pnpm/setup@v2
+        with:
+          version: 11.24.0
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Publish package to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_VERSION#v}"
+          package_name="$(node -p "require('./package.json').name")"
+          if npm view "${package_name}@${version}" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "${package_name}@${version} is already published; skipping."
+          else
+            pnpm publish --access public --provenance --no-git-checks
+          fi
+
+      - name: Wait for package to be available on npm
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_VERSION#v}"
+          package_name="$(node -p "require('./package.json').name")"
+          for attempt in $(seq 1 60); do
+            published_version="$(npm view "${package_name}@${version}" version --registry=https://registry.npmjs.org 2>/dev/null || true)"
+            if [ "$published_version" = "$version" ]; then
+              echo "${package_name}@${version} is available on npm."
+              exit 0
+            fi
+            echo "Waiting for ${package_name}@${version} to propagate (attempt ${attempt}/60)."
+            sleep 10
+          done
+          echo "Timed out waiting for ${package_name}@${version} to propagate." >&2
+          exit 1
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ github.ref_name }}" >/dev/null 2>&1; then
+            echo "GitHub release ${{ github.ref_name }} already exists; skipping."
+          else
+            gh release create "${{ github.ref_name }}" \
+              --verify-tag \
+              --title "${{ github.ref_name }}" \
+              --generate-notes
+          fi

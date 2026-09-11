@@ -1,8 +1,12 @@
 {
   "name": "docusaurus-plugin-ai",
   "version": "0.1.0",
+  "packageManager": "pnpm@11.24.0",
   "description": "A vendor-neutral AI foundation for Docusaurus documentation search and Q&A.",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "files": [
     "dist"
@@ -29,7 +33,9 @@
     "demo:build": "pnpm build && pnpm --dir demo build",
     "demo:start": "pnpm build && pnpm --dir demo start",
     "format": "biome format --write .",
+    "format:check": "biome format .",
     "lint": "biome check .",
+    "release:check": "node scripts/check-release-version.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
