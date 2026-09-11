@@ -13,6 +13,7 @@
     "@docusaurus/preset-classic": "3.10.2",
     "@mdx-js/react": "^3.1.1",
     "@docusaurus-plugin-ai/core": "workspace:*",
+    "@docusaurus-plugin-ai/ui": "workspace:*",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

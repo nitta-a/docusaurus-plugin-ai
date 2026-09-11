@@ -13,6 +13,9 @@ export default function Home() {
           <Link className="button button--secondary button--lg" to="/ai">
             Ask the documentation
           </Link>
+          <Link className="button button--outline button--lg" to="/ui-example">
+            UI package example
+          </Link>
           <Link className="button button--outline button--lg" to="/docs/intro">
             Read the docs
           </Link>

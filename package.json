@@ -1,6 +1,6 @@
 {
   "name": "@docusaurus-plugin-ai/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packageManager": "pnpm@11.24.0",
   "description": "A vendor-neutral AI foundation for Docusaurus documentation search and Q&A.",
   "license": "MIT",
@@ -32,7 +32,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "tsup && tsc -p tsconfig.build.json",
+    "build": "tsup && tsc -p tsconfig.build.json && pnpm --dir packages/ui build",
     "clean": "rm -rf dist",
     "demo:build": "pnpm build && pnpm --dir demo build",
     "demo:start": "pnpm build && pnpm --dir demo start",
@@ -41,9 +41,9 @@
     "audit:prod": "pnpm audit --prod",
     "lint": "biome check .",
     "release:check": "node scripts/check-release-version.mjs",
-    "test": "vitest run",
+    "test": "vitest run && pnpm --dir packages/ui test",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && pnpm --dir packages/ui typecheck"
   },
   "engines": {
     "node": ">=20"

@@ -1,6 +1,10 @@
 import { readFile } from 'node:fs/promises';
 
-const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+const packagePaths = ['../package.json', '../packages/ui/package.json'];
+const packages = await Promise.all(
+  packagePaths.map(async (packagePath) => JSON.parse(await readFile(new URL(packagePath, import.meta.url), 'utf8'))),
+);
+const packageJson = packages[0];
 const tag = process.argv[2] ?? process.env.GITHUB_REF_NAME;
 
 if (!tag || !/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(tag)) {
@@ -12,4 +16,10 @@ if (tagVersion !== packageJson.version) {
   throw new Error(`Release tag ${tag} does not match package.json version ${packageJson.version}.`);
 }
 
-console.log(`Release tag ${tag} matches ${packageJson.name}@${packageJson.version}.`);
+for (const packageToCheck of packages.slice(1)) {
+  if (packageToCheck.version !== tagVersion) {
+    throw new Error(`Release tag ${tag} does not match ${packageToCheck.name}@${packageToCheck.version}.`);
+  }
+}
+
+console.log(`Release tag ${tag} matches ${packages.map(({ name, version }) => `${name}@${version}`).join(', ')}.`);

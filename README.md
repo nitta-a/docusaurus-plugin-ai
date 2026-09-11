@@ -248,6 +248,34 @@ users to Microsoft Entra ID. A standalone Function App is not protected by
 that file: deploy it with `authLevel: 'function'` or enforce authentication at
 an API gateway such as Azure API Management.
 
+## React UI package
+
+The provider-neutral React surface lives in `@docusaurus-plugin-ai/ui`. It uses
+the Vercel AI SDK React transport for streaming, but contains no OpenAI, Azure,
+Bedrock, or other provider implementation:
+
+```tsx
+import { AiChat } from '@docusaurus-plugin-ai/ui';
+import '@docusaurus-plugin-ai/ui/styles.css';
+
+export function DocumentationChat() {
+  return (
+    <AiChat
+      endpoint="/api/ai/chat"
+      placeholder="ドキュメントについて質問してください"
+      context={{ pathname: window.location.pathname }}
+    />
+  );
+}
+```
+
+The endpoint should return a Vercel AI SDK plain-text stream (for example,
+`streamText(...).toTextStreamResponse()`). The UI sends normalized
+`{ messages, context }` JSON, shows a fixed bottom-right launcher, and supports
+Enter to send and Shift+Enter for a newline. The existing core package's
+`createHttpAIProvider` remains available for integrations that prefer the
+provider-injected `AIChat` API.
+
 ## Run the Docusaurus demo
 
 ```bash

@@ -66,7 +66,7 @@ jobs:
         run: pnpm release:check "${{ github.ref_name }}"
 
   publish:
-    name: Publish package and GitHub Release
+    name: Publish packages and GitHub Release
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -95,38 +95,44 @@ jobs:
       - name: Build package
         run: pnpm build
 
-      - name: Publish package to npm
+      - name: Publish packages to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           RELEASE_VERSION: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           version="${RELEASE_VERSION#v}"
-          package_name="$(node -p "require('./package.json').name")"
-          if npm view "${package_name}@${version}" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
-            echo "${package_name}@${version} is already published; skipping."
-          else
-            pnpm publish --access public --provenance --no-git-checks
-          fi
+          for package_dir in . packages/ui; do
+            package_name="$(node -p "require('./${package_dir}/package.json').name")"
+            if npm view "${package_name}@${version}" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+              echo "${package_name}@${version} is already published; skipping."
+            else
+              (cd "${package_dir}" && pnpm publish --access public --provenance --no-git-checks)
+            fi
+          done
 
-      - name: Wait for package to be available on npm
+      - name: Wait for packages to be available on npm
         env:
           RELEASE_VERSION: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           version="${RELEASE_VERSION#v}"
-          package_name="$(node -p "require('./package.json').name")"
-          for attempt in $(seq 1 60); do
-            published_version="$(npm view "${package_name}@${version}" version --registry=https://registry.npmjs.org 2>/dev/null || true)"
-            if [ "$published_version" = "$version" ]; then
-              echo "${package_name}@${version} is available on npm."
-              exit 0
-            fi
-            echo "Waiting for ${package_name}@${version} to propagate (attempt ${attempt}/60)."
-            sleep 10
+          for package_dir in . packages/ui; do
+            package_name="$(node -p "require('./${package_dir}/package.json').name")"
+            for attempt in $(seq 1 60); do
+              published_version="$(npm view "${package_name}@${version}" version --registry=https://registry.npmjs.org 2>/dev/null || true)"
+              if [ "$published_version" = "$version" ]; then
+                echo "${package_name}@${version} is available on npm."
+                break
+              fi
+              if [ "$attempt" = 60 ]; then
+                echo "Timed out waiting for ${package_name}@${version} to propagate." >&2
+                exit 1
+              fi
+              echo "Waiting for ${package_name}@${version} to propagate (attempt ${attempt}/60)."
+              sleep 10
+            done
           done
-          echo "Timed out waiting for ${package_name}@${version} to propagate." >&2
-          exit 1
 
       - name: Create GitHub Release
         env:
