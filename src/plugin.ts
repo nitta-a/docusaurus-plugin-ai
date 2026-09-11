@@ -2,7 +2,8 @@ import { readdir, readFile } from 'node:fs/promises';
 import { basename, dirname, extname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { LoadContext, Plugin } from '@docusaurus/types';
-import type { AIDocument } from './provider.js';
+import { parseMarkdownToChunks } from './build/parser.js';
+import type { DocumentChunk } from './core/types.js';
 
 export interface DocusaurusPluginAIOptions {
   /** Docs directory relative to the Docusaurus site directory. */
@@ -20,7 +21,7 @@ interface FrontMatter {
 }
 
 interface PluginContent {
-  documents: AIDocument[];
+  chunks: DocumentChunk[];
 }
 
 const parseScalar = (value: string): string => value.trim().replace(/^['"]|['"]$/gu, '');
@@ -40,19 +41,6 @@ const readFrontMatter = (source: string): { data: FrontMatter; body: string } =>
   }
   return { data, body: source.slice(end + 4) };
 };
-
-const markdownToText = (markdown: string): string =>
-  markdown
-    .replace(/^import .*$/gmu, '')
-    .replace(/^export .*$/gmu, '')
-    .replace(/```[\s\S]*?```/gu, '')
-    .replace(/!\[([^\]]*)\]\([^)]*\)/gu, '$1')
-    .replace(/\[([^\]]+)\]\([^)]*\)/gu, '$1')
-    .replace(/<[^>]+>/gu, ' ')
-    .replace(/^\s{0,3}#{1,6}\s+/gmu, '')
-    .replace(/[*_~`]/gu, '')
-    .replace(/\s+/gu, ' ')
-    .trim();
 
 const walkMarkdownFiles = async (directory: string): Promise<string[]> => {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -76,7 +64,7 @@ const documentUrl = (relativePath: string, routeBasePath: string, slug?: string)
   return `${routeBasePath.replace(/\/$/u, '')}/${pagePath}`.replace(/\/$/u, '') || '/';
 };
 
-export const loadDocuments = async (docsDirectory: string, docsRouteBasePath = '/docs'): Promise<AIDocument[]> => {
+export const loadDocuments = async (docsDirectory: string, docsRouteBasePath = '/docs'): Promise<DocumentChunk[]> => {
   const files = await walkMarkdownFiles(docsDirectory);
   const documents = await Promise.all(
     files.map(async (filePath) => {
@@ -88,16 +76,20 @@ export const loadDocuments = async (docsDirectory: string, docsRouteBasePath = '
         .split(sep)
         .join('/');
       const title = data.title ?? (basename(id).replace(/[-_]/gu, ' ') || 'Documentation');
-      return {
-        id,
+      return parseMarkdownToChunks({
         title,
-        content: markdownToText(body),
         url: documentUrl(relativePath, docsRouteBasePath, data.slug),
-        ...(data.description ? { description: data.description } : {}),
-      } satisfies AIDocument;
+        rawMarkdown: body,
+      }).map((chunk) => ({
+        ...chunk,
+        ...(data.description && !chunk.headingPath?.length
+          ? { content: `${data.description}\n\n${chunk.content}` }
+          : {}),
+        id: `${id}:${chunk.id}`,
+      }));
     }),
   );
-  return documents.sort((left, right) => left.id.localeCompare(right.id));
+  return documents.flat().sort((left, right) => left.id.localeCompare(right.id));
 };
 
 const normalizePath = (value: string): string => `/${value.replace(/^\/+|\/+$/gu, '')}`;
@@ -116,7 +108,7 @@ const docusaurusPluginAI = (context: LoadContext, options: DocusaurusPluginAIOpt
     name: 'docusaurus-plugin-ai',
     async loadContent() {
       return {
-        documents: await loadDocuments(docsDirectory, docsRouteBasePath),
+        chunks: await loadDocuments(docsDirectory, docsRouteBasePath),
       };
     },
     async contentLoaded({ content, actions }) {

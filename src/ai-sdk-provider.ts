@@ -1,5 +1,12 @@
-import { generateText } from 'ai';
-import type { AIMessage, AIProvider, AIResponse, AIUsage } from './provider.js';
+import { generateText, streamText } from 'ai';
+import type {
+  AIResponse,
+  AIStreamResponse,
+  AIUsage,
+  ChatMessage,
+  GenerationOptions,
+  LLMProvider,
+} from './core/types.js';
 
 /**
  * Creates a provider-specific model without exposing the Vercel AI SDK model
@@ -40,10 +47,10 @@ const normalizeUsage = (usage: unknown): AIUsage | undefined => {
   };
 };
 
-const toModelMessages = (messages: readonly AIMessage[]) => messages.map(({ role, content }) => ({ role, content }));
+const toModelMessages = (messages: readonly ChatMessage[]) => messages.map(({ role, content }) => ({ role, content }));
 
 /**
- * Adapt a Vercel AI SDK language model to the vendor-neutral AIProvider
+ * Adapt a Vercel AI SDK language model to the vendor-neutral LLMProvider
  * contract. The SDK's model type is intentionally used only inside this file.
  */
 export const createVercelAIProvider = ({
@@ -52,21 +59,42 @@ export const createVercelAIProvider = ({
   system,
   maxOutputTokens,
   temperature,
-}: VercelAIProviderOptions): AIProvider => ({
-  async generate({ messages }): Promise<AIResponse> {
-    const result = await generateText({
-      model: createModel(model) as Parameters<typeof generateText>[0]['model'],
-      messages: toModelMessages(messages),
-      ...(system === undefined ? {} : { system }),
-      ...(maxOutputTokens === undefined ? {} : { maxOutputTokens }),
-      ...(temperature === undefined ? {} : { temperature }),
-    });
-
-    const usage = normalizeUsage(result.usage);
+}: VercelAIProviderOptions): LLMProvider => {
+  const resolveOptions = (options?: GenerationOptions) => {
+    const resolvedMaxOutputTokens = options?.maxTokens ?? maxOutputTokens;
+    const resolvedTemperature = options?.temperature ?? temperature;
     return {
-      content: result.text,
-      model,
-      ...(usage ? { usage } : {}),
+      ...(resolvedMaxOutputTokens === undefined ? {} : { maxOutputTokens: resolvedMaxOutputTokens }),
+      ...(resolvedTemperature === undefined ? {} : { temperature: resolvedTemperature }),
+      ...(options?.signal === undefined ? {} : { abortSignal: options.signal }),
     };
-  },
-});
+  };
+
+  return {
+    async generate(messages, options?: GenerationOptions): Promise<AIResponse> {
+      const result = await generateText({
+        model: createModel(model) as Parameters<typeof generateText>[0]['model'],
+        messages: toModelMessages(messages),
+        ...(system === undefined ? {} : { system }),
+        ...resolveOptions(options),
+      });
+
+      const usage = normalizeUsage(result.usage);
+      return {
+        content: result.text,
+        model,
+        ...(usage ? { usage } : {}),
+      };
+    },
+    async stream(messages, options?: GenerationOptions): Promise<AIStreamResponse> {
+      const result = streamText({
+        model: createModel(model) as Parameters<typeof streamText>[0]['model'],
+        messages: toModelMessages(messages),
+        ...(system === undefined ? {} : { system }),
+        ...resolveOptions(options),
+      });
+
+      return { stream: result.textStream };
+    },
+  };
+};

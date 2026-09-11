@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { createVercelAIProvider, type VercelAIProviderOptions } from './ai-sdk-provider.js';
-import type { AIProvider } from './provider.js';
+import type { LLMProvider } from './core/types.js';
 
 export interface OpenAIProviderOptions extends Omit<VercelAIProviderOptions, 'createModel'> {
   apiKey?: string;
@@ -27,7 +27,7 @@ export const createOpenAIProvider = ({
   system,
   maxOutputTokens,
   temperature,
-}: OpenAIProviderOptions): AIProvider => {
+}: OpenAIProviderOptions): LLMProvider => {
   const openai = createOpenAI({
     ...(apiKey === undefined ? {} : { apiKey }),
     ...(baseURL === undefined ? {} : { baseURL }),

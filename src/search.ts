@@ -1,7 +1,7 @@
-import type { AIDocument } from './provider.js';
+import type { DocumentChunk } from './core/types.js';
 
 export interface AISearchResult {
-  document: AIDocument;
+  document: DocumentChunk;
   score: number;
   snippet: string;
 }
@@ -36,7 +36,7 @@ const makeSnippet = (content: string, query: string, length: number): string => 
 /** Return the most relevant local documentation matches for a query. */
 export const searchDocuments = (
   query: string,
-  documents: readonly AIDocument[],
+  documents: readonly DocumentChunk[],
   options: AISearchOptions = {},
 ): AISearchResult[] => {
   const queryTokens = tokenize(query);

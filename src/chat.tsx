@@ -1,17 +1,36 @@
 import type { FormEvent } from 'react';
 import { useState } from 'react';
-import type { AIMessage, AIProvider } from './provider.js';
+import type { AITextStream, LLMProvider, ChatMessage as ProviderMessage, SourceReference } from './core/types.js';
 
 export interface AIChatProps {
-  provider: AIProvider;
+  provider: LLMProvider;
   title?: string;
   description?: string;
   placeholder?: string;
 }
 
-interface ChatMessage extends AIMessage {
+interface ChatMessage extends ProviderMessage {
   id: number;
+  sources?: readonly SourceReference[];
 }
+
+const toAsyncIterable = async function* (stream: AITextStream): AsyncIterable<string> {
+  if (typeof (stream as AsyncIterable<string>)[Symbol.asyncIterator] === 'function') {
+    yield* stream as AsyncIterable<string>;
+    return;
+  }
+
+  const reader = (stream as ReadableStream<string>).getReader();
+  try {
+    while (true) {
+      const result = await reader.read();
+      if (result.done) return;
+      yield result.value;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+};
 
 /** A small accessible, unstyled chat surface for embedding in Docusaurus. */
 export const AIChat = ({
@@ -37,13 +56,33 @@ export const AIChat = ({
     setIsLoading(true);
 
     try {
-      const response = await provider.generate({
-        messages: [...messages, userMessage].map(({ role, content: messageContent }) => ({
-          role,
-          content: messageContent,
-        })),
-      });
-      setMessages((current) => [...current, { id: Date.now() + 1, role: 'assistant', content: response.content }]);
+      const requestMessages = [...messages, userMessage].map(({ role, content: messageContent }) => ({
+        role,
+        content: messageContent,
+      }));
+
+      if (provider.stream) {
+        const assistantId = Date.now() + 1;
+        const response = await provider.stream(requestMessages);
+        setMessages((current) => [
+          ...current,
+          { id: assistantId, role: 'assistant', content: '', sources: response.sources },
+        ]);
+
+        let content = '';
+        for await (const delta of toAsyncIterable(response.stream)) {
+          content += delta;
+          setMessages((current) =>
+            current.map((message) => (message.id === assistantId ? { ...message, content } : message)),
+          );
+        }
+      } else {
+        const response = await provider.generate(requestMessages);
+        setMessages((current) => [
+          ...current,
+          { id: Date.now() + 1, role: 'assistant', content: response.content, sources: response.sources },
+        ]);
+      }
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : '回答の取得に失敗しました。');
     } finally {
@@ -60,6 +99,19 @@ export const AIChat = ({
           <article key={message.id} data-role={message.role}>
             <strong>{message.role === 'user' ? 'You' : 'AI'}</strong>
             <p style={{ whiteSpace: 'pre-wrap' }}>{message.content}</p>
+            {message.sources && message.sources.length > 0 ? (
+              <aside aria-label="参照元">
+                <strong>参照元</strong>
+                <ul>
+                  {message.sources.map((source) => (
+                    <li key={source.id}>
+                      <a href={source.url}>{source.title}</a>
+                      <p>{source.snippet}</p>
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+            ) : null}
           </article>
         ))}
         {isLoading ? <p role="status">回答を生成しています…</p> : null}
