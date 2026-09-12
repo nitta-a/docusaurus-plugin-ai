@@ -105,6 +105,21 @@
   line-height: 1.5;
 }
 
+.docusaurus-ai__sources {
+  margin-top: 0.5rem;
+  color: var(--docusaurus-ai-muted);
+  font-size: 0.8rem;
+}
+
+.docusaurus-ai__sources ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.docusaurus-ai__sources p {
+  margin: 0.15rem 0 0;
+}
+
 .docusaurus-ai__message--user .docusaurus-ai__message-content {
   padding: 0.6rem 0.75rem;
   border-radius: 0.6rem;

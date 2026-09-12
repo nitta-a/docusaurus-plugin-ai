@@ -1,4 +1,4 @@
-import type { AiChatMessage } from '../types.js';
+import type { AIErrorResponse, AiChatMessage } from '../types.js';
 import { ChatInput } from './ChatInput.js';
 import { ChatMessage } from './ChatMessage.js';
 
@@ -9,7 +9,7 @@ export interface AiChatPanelProps {
   readonly onSubmit: () => void | Promise<void>;
   readonly onClose: () => void;
   readonly isLoading: boolean;
-  readonly error?: string;
+  readonly error?: AIErrorResponse;
   readonly title?: string;
   readonly description?: string;
   readonly placeholder?: string;
@@ -61,11 +61,7 @@ export const AiChatPanel = ({
         </p>
       ) : null}
     </div>
-    {error ? (
-      <p className="docusaurus-ai__error" role="alert">
-        {error}
-      </p>
-    ) : null}
+    {error ? <AiChatError error={error} /> : null}
     <ChatInput
       value={input}
       onChange={onInputChange}
@@ -75,4 +71,26 @@ export const AiChatPanel = ({
       disabled={isLoading}
     />
   </section>
+);
+
+const copyTraceId = async (traceId: string): Promise<void> => {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+  await navigator.clipboard.writeText(traceId);
+};
+
+const AiChatError = ({ error }: { readonly error: AIErrorResponse }) => (
+  <div className="docusaurus-ai__error" role="alert">
+    <p>{error.error}</p>
+    {error.code ? <p data-error-code={`error-code-${error.code}`}>Code: {error.code}</p> : null}
+    {error.detail ? <p>Details: {error.detail}</p> : null}
+    {error.status ? <p>Status: {error.status}</p> : null}
+    {error.traceId ? (
+      <p>
+        Trace ID: <code>{error.traceId}</code>{' '}
+        <button type="button" onClick={() => void copyTraceId(error.traceId ?? '')}>
+          Copy
+        </button>
+      </p>
+    ) : null}
+  </div>
 );

@@ -74,6 +74,32 @@ normal requests, and returns the AI SDK text stream for requests whose
 `Accept` header includes `text/plain`. Streaming citations are sent in the
 URL-encoded `x-docusaurus-ai-sources` response header.
 
+`createRAGProvider` intentionally emits retrieved context as a system message
+in the vendor-neutral contract. `createVercelAIProvider` converts all system
+messages into the AI SDK 7 `instructions` option and removes them from the
+`messages` array. The configured `system` instruction is placed before the RAG
+context, so `azure.chat(deployment)` uses Azure OpenAI Chat Completions without
+the AI SDK 7 system-message validation error.
+
+Use `Accept: text/plain` for incremental output and
+`Accept: application/json` for a complete response containing `content`,
+`model`, `usage`, and `sources`. Failures are JSON `AIErrorResponse` values
+with `error`, `code`, `detail`, `status`, and `traceId`.
+
+For a separately hosted Docusaurus frontend, set `CORS_ORIGIN` to the exact
+origin and allow the same origin in the Function App CORS settings:
+
+```bash
+az functionapp cors add \
+  --resource-group <resource-group> \
+  --name <function-app> \
+  --allowed-origins https://docs.example.com http://localhost:3000
+```
+
+The sample returns `OPTIONS` preflight headers when `CORS_ORIGIN` is set. CORS
+does not replace authentication; use SWA Entra ID, Function authentication,
+or an authenticated API gateway for production deployments.
+
 ## Security and operations
 
 `src/validation.ts` rejects empty or oversized prompts, more than 20 messages,

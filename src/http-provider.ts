@@ -1,4 +1,5 @@
 import type {
+  AIErrorResponse,
   AIResponse,
   AIStreamResponse,
   ChatMessage,
@@ -21,6 +22,17 @@ export interface HttpAIProviderOptions {
   readonly credentials?: RequestCredentials;
   /** Injectable fetch implementation for tests or an application middleware. */
   readonly fetch?: typeof globalThis.fetch;
+}
+
+/** Error that retains the structured response returned by an AI endpoint. */
+export class AIProviderError extends Error {
+  readonly response: AIErrorResponse;
+
+  constructor(response: AIErrorResponse, rawBody?: string) {
+    super(`HTTP ${response.status ?? 500}: ${rawBody || response.error}`);
+    this.name = 'AIProviderError';
+    this.response = response;
+  }
 }
 
 interface HttpRequestBody {
@@ -60,18 +72,39 @@ const parseResponse = (value: unknown): AIResponse => {
   };
 };
 
-const readErrorDetail = async (response: Response): Promise<string> => {
-  try {
-    const body = (await response.text()).trim().replace(/\s+/gu, ' ');
-    return body ? `: ${body.slice(0, 240)}` : '';
-  } catch {
-    return '';
+const parseErrorResponse = (value: unknown, status: number): AIErrorResponse => {
+  if (isRecord(value) && typeof value.error === 'string') {
+    return {
+      error: value.error,
+      ...(typeof value.code === 'string' ? { code: value.code } : {}),
+      ...(typeof value.detail === 'string' ? { detail: value.detail } : {}),
+      ...(typeof value.status === 'number' ? { status: value.status } : { status }),
+      ...(typeof value.traceId === 'string' ? { traceId: value.traceId } : {}),
+      ...(parseSources(value.sources) ? { sources: parseSources(value.sources) } : {}),
+    };
   }
+  return { error: `AI endpoint request failed with HTTP ${status}.`, status };
 };
 
 const assertSuccessful = async (response: Response): Promise<void> => {
   if (response.ok) return;
-  throw new Error(`AI endpoint request failed with HTTP ${response.status}${await readErrorDetail(response)}`);
+  let rawBody = '';
+  try {
+    rawBody = await response.text();
+  } catch {
+    // Keep the status-only structured error when the body cannot be read.
+  }
+  let parsedBody: unknown;
+  try {
+    parsedBody = rawBody ? (JSON.parse(rawBody) as unknown) : undefined;
+  } catch {
+    parsedBody = undefined;
+  }
+  const error = parseErrorResponse(parsedBody, response.status);
+  throw new AIProviderError(
+    rawBody ? { ...error, ...(error.error.startsWith('AI endpoint request failed') ? { error: rawBody } : {}) } : error,
+    rawBody,
+  );
 };
 
 const toRequestOptions = (options?: GenerationOptions): HttpRequestBody['options'] | undefined => {

@@ -94,12 +94,31 @@ describe('LLMProvider', () => {
 
     expect(generateTextMock).toHaveBeenCalledWith({
       model,
-      messages: [
-        { role: 'system', content: 'System message' },
-        { role: 'user', content: 'Question' },
-      ],
-      system: 'Answer from docs.',
+      messages: [{ role: 'user', content: 'Question' }],
+      instructions: 'Answer from docs.\n\nSystem message',
     });
+  });
+
+  it('normalizes RAG system context for AI SDK 7 instructions', async () => {
+    generateTextMock.mockResolvedValue({ text: 'RAG answer', usage: {} });
+    const provider = createVercelAIProvider({
+      model: 'gpt-4o-mini',
+      createModel: () => ({ provider: 'openai.chat' }),
+      system: 'Follow the application policy.',
+    });
+
+    await provider.generate([
+      { role: 'system', content: 'Retrieved documentation context.' },
+      { role: 'user', content: 'How does this work?' },
+    ]);
+
+    const call = generateTextMock.mock.calls.at(-1)?.[0] as {
+      messages: readonly { role: string }[];
+      instructions: string;
+    };
+    expect(call.messages).toEqual([{ role: 'user', content: 'How does this work?' }]);
+    expect(call.messages.some((message) => message.role === 'system')).toBe(false);
+    expect(call.instructions).toBe('Follow the application policy.\n\nRetrieved documentation context.');
   });
 
   it('provides an OpenAI adapter through the same contract', async () => {
@@ -127,7 +146,13 @@ describe('LLMProvider', () => {
     });
 
     const provider = createVercelAIProvider({ model: 'test-model', createModel: () => ({ provider: 'test' }) });
-    const response = await provider.stream?.([{ role: 'user', content: 'Hello?' }], { temperature: 0.2 });
+    const response = await provider.stream?.(
+      [
+        { role: 'system', content: 'Use the retrieved context.' },
+        { role: 'user', content: 'Hello?' },
+      ],
+      { temperature: 0.2 },
+    );
 
     expect(response?.sources).toBeUndefined();
     await expect(response?.usage).resolves.toEqual({ promptTokens: 4, completionTokens: 3, totalTokens: 7 });
@@ -137,6 +162,7 @@ describe('LLMProvider', () => {
     expect(streamTextMock).toHaveBeenCalledWith({
       model: { provider: 'test' },
       messages: [{ role: 'user', content: 'Hello?' }],
+      instructions: 'Use the retrieved context.',
       temperature: 0.2,
     });
   });

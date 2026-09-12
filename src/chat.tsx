@@ -1,12 +1,19 @@
 import type { FormEvent } from 'react';
 import { useState } from 'react';
-import type { AITextStream, LLMProvider, ChatMessage as ProviderMessage, SourceReference } from './core/types.js';
+import type {
+  AIErrorResponse,
+  AITextStream,
+  LLMProvider,
+  ChatMessage as ProviderMessage,
+  SourceReference,
+} from './core/types.js';
 
 export interface AIChatProps {
   readonly provider: LLMProvider;
   readonly title?: string;
   readonly description?: string;
   readonly placeholder?: string;
+  readonly onError?: (error: AIErrorResponse, cause: unknown) => void;
 }
 
 interface ChatMessage extends ProviderMessage {
@@ -30,6 +37,16 @@ const toAsyncIterable = async function* (stream: AITextStream): AsyncIterable<st
   } finally {
     reader.releaseLock();
   }
+};
+
+const toAIErrorResponse = (value: unknown): AIErrorResponse => {
+  if (value && typeof value === 'object' && 'response' in value) {
+    const response = (value as { response?: unknown }).response;
+    if (response && typeof response === 'object' && 'error' in response && typeof response.error === 'string') {
+      return response as AIErrorResponse;
+    }
+  }
+  return { error: value instanceof Error ? value.message : '回答の取得に失敗しました。' };
 };
 
 /** Consume text deltas while exposing the accumulated response to a renderer. */
@@ -67,11 +84,12 @@ export const AIChat = ({
   title = 'Ask the documentation',
   description = 'Ask a question and the configured provider will answer it.',
   placeholder = 'How do I get started?',
+  onError,
 }: AIChatProps) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AIErrorResponse | null>(null);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -111,7 +129,9 @@ export const AIChat = ({
         ]);
       }
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : '回答の取得に失敗しました。');
+      const structuredError = toAIErrorResponse(caughtError);
+      setError(structuredError);
+      onError?.(structuredError, caughtError);
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +151,29 @@ export const AIChat = ({
         ))}
         {isLoading ? <p role="status">回答を生成しています…</p> : null}
       </div>
-      {error ? <p role="alert">{error}</p> : null}
+      {error ? (
+        <div role="alert">
+          <p>{error.error}</p>
+          {error.code ? <p>Code: {error.code}</p> : null}
+          {error.detail ? <p>Details: {error.detail}</p> : null}
+          {error.status ? <p>Status: {error.status}</p> : null}
+          {error.traceId ? (
+            <p>
+              Trace ID: <code>{error.traceId}</code>{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                    void navigator.clipboard.writeText(error.traceId ?? '');
+                  }
+                }}
+              >
+                Copy
+              </button>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <form onSubmit={submit}>
         <label htmlFor="ai-chat-input">質問</label>
         <input

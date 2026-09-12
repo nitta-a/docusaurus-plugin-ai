@@ -81,6 +81,16 @@ export interface AIResponse {
   readonly sources?: readonly SourceReference[];
 }
 
+/** Structured error payload returned by an application-owned AI endpoint. */
+export interface AIErrorResponse {
+  readonly error: string;
+  readonly code?: string;
+  readonly detail?: string;
+  readonly status?: number;
+  readonly traceId?: string;
+  readonly sources?: readonly SourceReference[];
+}
+
 /** Incremental text and metadata returned by a streaming provider. */
 export type AITextStream = AsyncIterable<string> | ReadableStream<string>;
 

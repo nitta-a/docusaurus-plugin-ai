@@ -156,6 +156,14 @@ Other AI SDK providers can use `createVercelAIProvider` with an application-owne
 model factory. Keep credentials on the server; do not bundle provider keys into
 the static Docusaurus site.
 
+`createVercelAIProvider` is compatible with AI SDK 7: it detects every
+`role: 'system'` message, removes those messages from `messages`, and combines
+their content into the `instructions` option. The configured `system` value is
+placed first, followed by RAG context, preserving the instruction order. This
+also applies to `createOpenAIProvider` and to Azure, Bedrock, or other adapters
+that supply a model factory. Applications do not need to rewrite
+`createRAGProvider` output.
+
 ### Azure OpenAI with Microsoft Entra ID
 
 The plugin deliberately does not depend on the Azure SDK. Install
@@ -238,6 +246,21 @@ it can expose the URL-encoded `x-docusaurus-ai-sources` response header so the
 chat surface can render sources before the first text delta. See the Azure
 Functions example for a complete handler.
 
+The request contract uses content negotiation:
+
+| Client | `Accept` | Response |
+| --- | --- | --- |
+| `createHttpAIProvider().generate()` | `application/json` | `AIResponse` JSON, including `model`, `usage`, and `sources` |
+| `createHttpAIProvider().stream()` | `text/plain` | UTF-8 text deltas; citations are in `x-docusaurus-ai-sources` |
+| `@docusaurus-plugin-ai/ui` `AiChat` | `text/plain` by default | Answer text only |
+
+The UI also accepts an explicit `Accept: application/json` header for clients
+that need JSON. Its chat renderer still displays only the response `content`;
+use `createHttpAIProvider().generate()` when the caller needs the complete JSON
+object programmatically. Structured failures use the public `AIErrorResponse`
+shape (`error`, `code`, `detail`, `status`, and `traceId`) and are retained by
+`AIProviderError`.
+
 #### Azure Static Web Apps authentication boundary
 
 The Azure Functions example uses `authLevel: 'anonymous'` because the sample
@@ -271,10 +294,42 @@ export function DocumentationChat() {
 
 The endpoint should return a Vercel AI SDK plain-text stream (for example,
 `streamText(...).toTextStreamResponse()`). The UI sends normalized
-`{ messages, context }` JSON, shows a fixed bottom-right launcher, and supports
-Enter to send and Shift+Enter for a newline. The existing core package's
+`{ messages, context }` JSON and `Accept: text/plain` by default, shows a fixed
+bottom-right launcher, and supports Enter to send and Shift+Enter for a newline.
+If an endpoint returns an `AIResponse` JSON envelope despite the text request,
+the UI renders only `content`; `model`, `usage`, and `sources` are not mixed
+into the answer text. The existing core package's
 `createHttpAIProvider` remains available for integrations that prefer the
 provider-injected `AIChat` API.
+
+### Azure Functions communication and CORS
+
+The complete request path is:
+
+```text
+Docusaurus/AiChat
+  -> POST /api/ai with JSON messages and Accept: text/plain or application/json
+  -> Azure Functions validation and CORS/auth boundary
+  -> createRAGProvider retrieval
+  -> createVercelAIProvider instructions normalization
+  -> @ai-sdk/azure azure.chat(deployment)
+  -> Azure OpenAI Chat Completions
+```
+
+For a separately hosted frontend, configure the Function App CORS allowlist
+instead of using `*` in production:
+
+```bash
+az functionapp cors add \
+  --resource-group <resource-group> \
+  --name <function-app> \
+  --allowed-origins https://docs.example.com http://localhost:3000
+```
+
+The sample also supports `CORS_ORIGIN` for explicit preflight and response
+headers. Same-origin Azure Static Web Apps deployments normally do not need
+additional CORS headers. Keep authentication at SWA, the Function App, or an
+API gateway; CORS is not authentication.
 
 ## Run the Docusaurus demo
 

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { AiChat, AiChatButton, ChatInput, ChatMessage } from '../src/index.js';
+import { AiChat, AiChatButton, AiChatPanel, ChatInput, ChatMessage } from '../src/index.js';
 
 describe('UI components', () => {
   it('renders an accessible launcher and message labels', () => {
@@ -35,5 +35,40 @@ describe('UI components', () => {
     expect(markup).toContain('<textarea');
     expect(markup).toContain('type="submit"');
     expect(markup).toContain('disabled=""');
+  });
+
+  it('renders RAG citations and structured error details', () => {
+    const markup = renderToStaticMarkup(
+      <AiChatPanel
+        messages={[
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: '回答本文',
+            sources: [{ id: 'setup', title: '設定ガイド', url: '/docs/setup', snippet: '引用スニペット' }],
+          },
+        ]}
+        input=""
+        onInputChange={() => undefined}
+        onSubmit={() => undefined}
+        onClose={() => undefined}
+        isLoading={false}
+        error={{
+          error: 'AIサービスでエラーが発生しました。',
+          code: 'AI_PROVIDER_ERROR',
+          detail: 'provider error',
+          status: 500,
+          traceId: 'trace-1',
+        }}
+      />,
+    );
+
+    expect(markup).toContain('回答本文');
+    expect(markup).toContain('設定ガイド');
+    expect(markup).toContain('引用スニペット');
+    expect(markup).toContain('AI_PROVIDER_ERROR');
+    expect(markup).toContain('provider error');
+    expect(markup).toContain('trace-1');
+    expect(markup).toContain('>Copy<');
   });
 });

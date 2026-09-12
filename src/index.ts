@@ -7,6 +7,7 @@ export { splitProseContent } from './core/chunker.js';
 export type { RAGConfig, RAGPromptContext } from './core/rag.js';
 export { createRAGProvider } from './core/rag.js';
 export type {
+  AIErrorResponse,
   AIResponse,
   AIRetriever,
   AIStreamResponse,
@@ -22,7 +23,7 @@ export type {
   SourceReference,
 } from './core/types.js';
 export type { HttpAIProviderOptions } from './http-provider.js';
-export { AI_SOURCES_HEADER, createHttpAIProvider } from './http-provider.js';
+export { AI_SOURCES_HEADER, AIProviderError, createHttpAIProvider } from './http-provider.js';
 export { createLocalAIProvider } from './local-provider.js';
 export type { OpenAIProviderOptions } from './openai-provider.js';
 export { createOpenAIProvider } from './openai-provider.js';

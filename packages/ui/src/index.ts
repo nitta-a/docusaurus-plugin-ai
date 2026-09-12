@@ -9,5 +9,6 @@ export { AiChatPanel } from './components/AiChatPanel.js';
 export type { ChatInputProps } from './components/ChatInput.js';
 export { ChatInput } from './components/ChatInput.js';
 export type { ChatMessageProps } from './components/ChatMessage.js';
-export { ChatMessage } from './components/ChatMessage.js';
-export type { AiChatContext, AiChatMessage, AiChatRole } from './types.js';
+export { AiChatSources, ChatMessage } from './components/ChatMessage.js';
+export type { AIErrorResponse, AiChatContext, AiChatMessage, AiChatRole, AiChatSource } from './types.js';
+export { AI_SOURCES_HEADER } from './types.js';

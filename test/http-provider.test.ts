@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AI_SOURCES_HEADER, createHttpAIProvider } from '../src/index.js';
+import { AI_SOURCES_HEADER, type AIProviderError, createHttpAIProvider } from '../src/index.js';
 
 describe('createHttpAIProvider', () => {
   it('posts the vendor-neutral request envelope and normalizes JSON responses', async () => {
@@ -78,6 +78,33 @@ describe('createHttpAIProvider', () => {
     await expect(provider.generate([{ role: 'user', content: '質問' }])).rejects.toThrow(
       'HTTP 503: {"error":"backend unavailable"}',
     );
+  });
+
+  it('preserves structured error fields for the UI', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: 'AIサービスでエラーが発生しました。',
+          code: 'AI_PROVIDER_ERROR',
+          detail: 'provider error message',
+          status: 500,
+          traceId: 'trace-123',
+        }),
+        { status: 500, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    const provider = createHttpAIProvider({ endpoint: '/api/ai', fetch: fetchMock });
+
+    await expect(provider.generate([{ role: 'user', content: '質問' }])).rejects.toMatchObject({
+      name: 'AIProviderError',
+      response: {
+        error: 'AIサービスでエラーが発生しました。',
+        code: 'AI_PROVIDER_ERROR',
+        detail: 'provider error message',
+        status: 500,
+        traceId: 'trace-123',
+      },
+    } satisfies Partial<AIProviderError>);
   });
 });
 

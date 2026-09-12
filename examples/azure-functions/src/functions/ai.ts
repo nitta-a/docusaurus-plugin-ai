@@ -46,6 +46,16 @@ const provider = createVercelAIProvider({
   system: '回答は提供されたドキュメントの内容だけに基づいてください。',
 });
 
+const corsOrigin = process.env.CORS_ORIGIN;
+const corsHeaders: Record<string, string> = corsOrigin
+  ? {
+      'access-control-allow-origin': corsOrigin,
+      'access-control-allow-headers': 'content-type, authorization, accept',
+      'access-control-allow-methods': 'POST, OPTIONS',
+    }
+  : {};
+const withCors = (headers: Record<string, string>): Record<string, string> => ({ ...corsHeaders, ...headers });
+
 const documentRetriever = createDocumentRetriever(documents);
 
 interface RequestRAG {
@@ -137,6 +147,7 @@ const streamResponse = async (
   return {
     status: 200,
     headers: {
+      ...corsHeaders,
       'content-type': 'text/plain; charset=utf-8',
       [AI_SOURCES_HEADER]: encodeURIComponent(JSON.stringify(result.sources ?? [])),
       'cache-control': 'no-cache',
@@ -151,6 +162,7 @@ export async function ai(request: HttpRequest, context: InvocationContext): Prom
   let query = '';
   let requestRAG: RequestRAG | undefined;
   try {
+    if (request.method === 'OPTIONS') return { status: 204, headers: corsHeaders };
     const parsed = validateAIRequest(await request.json());
     query = queryFromMessages(parsed.messages);
     requestRAG = createRequestRAG();
@@ -178,7 +190,11 @@ export async function ai(request: HttpRequest, context: InvocationContext): Prom
       ...(response.usage ? { usage: response.usage } : {}),
       status: 'success',
     });
-    return { status: 200, jsonBody: response };
+    return {
+      status: 200,
+      headers: withCors({ 'content-type': 'application/json; charset=utf-8' }),
+      jsonBody: response,
+    };
   } catch (error) {
     context.error(error);
     if (requestRAG) {
@@ -192,15 +208,23 @@ export async function ai(request: HttpRequest, context: InvocationContext): Prom
         ...(error instanceof Error ? { errorMessage: error.message } : {}),
       });
     }
+    const status = error instanceof AIRequestValidationError || error instanceof SyntaxError ? 400 : 500;
     return {
-      status: error instanceof AIRequestValidationError || error instanceof SyntaxError ? 400 : 500,
-      jsonBody: { error: error instanceof Error ? error.message : 'AI request failed.' },
+      status,
+      headers: withCors({ 'content-type': 'application/json; charset=utf-8' }),
+      jsonBody: {
+        error: status === 400 ? 'AIリクエストを検証できませんでした。' : 'AIサービスでエラーが発生しました。',
+        code: status === 400 ? 'AI_REQUEST_INVALID' : 'AI_PROVIDER_ERROR',
+        ...(error instanceof Error ? { detail: error.message } : {}),
+        status,
+        traceId,
+      },
     };
   }
 }
 
 app.http('ai', {
-  methods: ['POST'],
+  methods: ['POST', 'OPTIONS'],
   authLevel: 'anonymous',
   route: 'ai',
   handler: ai,

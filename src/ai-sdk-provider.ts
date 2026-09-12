@@ -47,7 +47,31 @@ const normalizeUsage = (usage: unknown): AIUsage | undefined => {
   };
 };
 
-const toModelMessages = (messages: readonly ChatMessage[]) => messages.map(({ role, content }) => ({ role, content }));
+interface NormalizedPrompt {
+  readonly messages: { readonly role: 'user' | 'assistant'; readonly content: string }[];
+  readonly instructions?: string;
+}
+
+/**
+ * AI SDK 7 does not accept system messages in `messages` by default. Keep the
+ * vendor-neutral message contract expressive, but translate its system content
+ * at the SDK boundary where `instructions` is available.
+ */
+const normalizePrompt = (messages: readonly ChatMessage[], baseSystem?: string): NormalizedPrompt => {
+  const instructionParts = [
+    ...(baseSystem === undefined ? [] : [baseSystem]),
+    ...messages.filter((message) => message.role === 'system').map((message) => message.content),
+  ].filter((content) => content.trim().length > 0);
+
+  const nonSystemMessages = messages
+    .filter((message): message is ChatMessage & { readonly role: 'user' | 'assistant' } => message.role !== 'system')
+    .map(({ role, content }) => ({ role, content }));
+
+  return {
+    messages: nonSystemMessages,
+    ...(instructionParts.length > 0 ? { instructions: instructionParts.join('\n\n') } : {}),
+  };
+};
 
 /**
  * Adapt a Vercel AI SDK language model to the vendor-neutral LLMProvider
@@ -72,10 +96,11 @@ export const createVercelAIProvider = ({
 
   return {
     async generate(messages, options?: GenerationOptions): Promise<AIResponse> {
+      const prompt = normalizePrompt(messages, system);
       const result = await generateText({
         model: createModel(model) as Parameters<typeof generateText>[0]['model'],
-        messages: toModelMessages(messages),
-        ...(system === undefined ? {} : { system }),
+        messages: prompt.messages,
+        ...(prompt.instructions === undefined ? {} : { instructions: prompt.instructions }),
         ...resolveOptions(options),
       });
 
@@ -87,10 +112,11 @@ export const createVercelAIProvider = ({
       };
     },
     async stream(messages, options?: GenerationOptions): Promise<AIStreamResponse> {
+      const prompt = normalizePrompt(messages, system);
       const result = streamText({
         model: createModel(model) as Parameters<typeof streamText>[0]['model'],
-        messages: toModelMessages(messages),
-        ...(system === undefined ? {} : { system }),
+        messages: prompt.messages,
+        ...(prompt.instructions === undefined ? {} : { instructions: prompt.instructions }),
         ...resolveOptions(options),
       });
 
