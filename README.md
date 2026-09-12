@@ -318,6 +318,11 @@ Use `maximized` for controlled state, or `defaultMaximized` for an initial
 state. `maximizeLabel`, `restoreLabel`, `copyLabel`, `copiedLabel`, and
 `copyErrorLabel` allow localization without replacing the controls.
 
+Assistant answers are rendered as safe Markdown with GitHub Flavored Markdown
+support for headings, lists, links, code blocks, tables, and task lists. Raw
+HTML is not rendered. Set `renderMarkdown={false}` when an application needs
+the original plain-text presentation.
+
 ### Azure Functions communication and CORS
 
 The complete request path is:

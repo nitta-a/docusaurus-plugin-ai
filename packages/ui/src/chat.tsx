@@ -39,6 +39,8 @@ export interface AiChatProps {
   readonly copyLabel?: string;
   readonly copiedLabel?: string;
   readonly copyErrorLabel?: string;
+  /** Render assistant answers as safe Markdown with GFM extensions by default. */
+  readonly renderMarkdown?: boolean;
   readonly onCopy?: (message: AiChatMessage) => void | Promise<void>;
 }
 
@@ -124,6 +126,7 @@ export const AiChat = ({
   copyLabel,
   copiedLabel,
   copyErrorLabel,
+  renderMarkdown,
   onCopy,
 }: AiChatProps) => {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
@@ -245,6 +248,7 @@ export const AiChat = ({
           copyLabel={copyLabel}
           copiedLabel={copiedLabel}
           copyErrorLabel={copyErrorLabel}
+          renderMarkdown={renderMarkdown}
           onCopy={onCopy}
           title={title}
           description={description}

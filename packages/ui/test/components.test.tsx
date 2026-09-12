@@ -44,7 +44,7 @@ describe('UI components', () => {
           {
             id: 'assistant-1',
             role: 'assistant',
-            content: '回答本文',
+            content: '**回答本文**',
             sources: [{ id: 'setup', title: '設定ガイド', url: '/docs/setup', snippet: '引用スニペット' }],
           },
         ]}
@@ -64,6 +64,7 @@ describe('UI components', () => {
     );
 
     expect(markup).toContain('回答本文');
+    expect(markup).toContain('<strong>回答本文</strong>');
     expect(markup).toContain('設定ガイド');
     expect(markup).toContain('引用スニペット');
     expect(markup).toContain('AI_PROVIDER_ERROR');
@@ -89,5 +90,34 @@ describe('UI components', () => {
     expect(markup).toContain('aria-label="Restore chat size"');
     expect(markup).toContain('aria-label="Copy answer"');
     expect(markup).toContain('aria-pressed="true"');
+  });
+
+  it('renders assistant answers as safe Markdown with GFM support', () => {
+    const markup = renderToStaticMarkup(
+      <ChatMessage
+        message={{
+          id: 'assistant-markdown',
+          role: 'assistant',
+          content: '# Heading\n\n- **bold**\n- `inline`\n\n| A | B |\n| --- | --- |\n| 1 | 2 |',
+        }}
+      />,
+    );
+
+    expect(markup).toContain('<h1>Heading</h1>');
+    expect(markup).toContain('<strong>bold</strong>');
+    expect(markup).toContain('<code>inline</code>');
+    expect(markup).toContain('<table>');
+  });
+
+  it('can keep assistant answers as plain text', () => {
+    const markup = renderToStaticMarkup(
+      <ChatMessage
+        message={{ id: 'assistant-plain', role: 'assistant', content: '**plain**' }}
+        renderMarkdown={false}
+      />,
+    );
+
+    expect(markup).toContain('**plain**');
+    expect(markup).not.toContain('<strong>plain</strong>');
   });
 });

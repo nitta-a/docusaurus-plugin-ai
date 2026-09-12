@@ -19,6 +19,7 @@ export interface AiChatPanelProps {
   readonly copyLabel?: string;
   readonly copiedLabel?: string;
   readonly copyErrorLabel?: string;
+  readonly renderMarkdown?: boolean;
   readonly onCopy?: (message: AiChatMessage) => void | Promise<void>;
   readonly title?: string;
   readonly description?: string;
@@ -45,6 +46,7 @@ export const AiChatPanel = ({
   copyLabel,
   copiedLabel,
   copyErrorLabel,
+  renderMarkdown,
   onCopy,
   title = 'Ask AI',
   description,
@@ -106,6 +108,7 @@ export const AiChatPanel = ({
             copyLabel={copyLabel}
             copiedLabel={copiedLabel}
             copyErrorLabel={copyErrorLabel}
+            renderMarkdown={renderMarkdown}
             onCopy={onCopy}
           />
         ))}

@@ -141,6 +141,53 @@
   line-height: 1.5;
 }
 
+.docusaurus-ai__markdown {
+  white-space: normal;
+}
+
+.docusaurus-ai__markdown > :first-child {
+  margin-top: 0;
+}
+
+.docusaurus-ai__markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.docusaurus-ai__markdown pre {
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--docusaurus-ai-fg) 8%, transparent);
+}
+
+.docusaurus-ai__markdown code {
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--docusaurus-ai-fg) 8%, transparent);
+  font-family: var(--ifm-font-family-monospace, ui-monospace, monospace);
+  font-size: 0.9em;
+  padding: 0.1em 0.25em;
+}
+
+.docusaurus-ai__markdown pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.docusaurus-ai__markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.docusaurus-ai__markdown th,
+.docusaurus-ai__markdown td {
+  border: 1px solid var(--docusaurus-ai-border);
+  padding: 0.35rem 0.55rem;
+  text-align: left;
+}
+
 .docusaurus-ai__sources {
   margin-top: 0.5rem;
   color: var(--docusaurus-ai-muted);

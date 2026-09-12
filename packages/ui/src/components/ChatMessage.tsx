@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { AiChatMessage, AiChatSource } from '../types.js';
 
 export interface ChatMessageProps {
@@ -8,6 +10,7 @@ export interface ChatMessageProps {
   readonly copyLabel?: string;
   readonly copiedLabel?: string;
   readonly copyErrorLabel?: string;
+  readonly renderMarkdown?: boolean;
   readonly onCopy?: (message: AiChatMessage) => void | Promise<void>;
 }
 
@@ -58,6 +61,7 @@ export const ChatMessage = ({
   copyLabel = 'Copy answer',
   copiedLabel = 'Copied',
   copyErrorLabel = 'Copy failed',
+  renderMarkdown = true,
   onCopy,
 }: ChatMessageProps) => {
   const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle');
@@ -81,7 +85,15 @@ export const ChatMessage = ({
   return (
     <article className={`docusaurus-ai__message docusaurus-ai__message--${message.role}`}>
       <strong className="docusaurus-ai__message-role">{message.role === 'user' ? userLabel : assistantLabel}</strong>
-      <div className="docusaurus-ai__message-content">{message.content || ' '}</div>
+      <div
+        className={`docusaurus-ai__message-content${message.role === 'assistant' && renderMarkdown ? ' docusaurus-ai__markdown' : ''}`}
+      >
+        {message.role === 'assistant' && renderMarkdown ? (
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content || ' '}</ReactMarkdown>
+        ) : (
+          message.content || ' '
+        )}
+      </div>
       {message.role === 'assistant' ? (
         <div className="docusaurus-ai__message-actions">
           <button
