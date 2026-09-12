@@ -22,3 +22,11 @@ minimumReleaseAgeExclude:
   - '@biomejs/cli-linux-x64@2.5.13'
   - '@biomejs/cli-win32-arm64@2.5.13'
   - '@biomejs/cli-win32-x64@2.5.13'
+
+patchedDependencies:
+  image-size@2.0.2: patches/image-size@2.0.2.patch
+
+auditConfig:
+  ignoreGhsas:
+    - GHSA-w3rx-r6r6-pgpr
+    - GHSA-5p2g-fcmc-qvqq

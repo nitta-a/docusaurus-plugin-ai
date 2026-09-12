@@ -38,9 +38,15 @@ idempotent: if that exact version is already on npm, publishing is skipped and
 the package is still checked for registry availability.
 
 The release checks audit only production dependencies because the private
-Docusaurus demo is a build-time workspace project. Its current `image-size`
-advisories have no upstream patched version; they are not included in the npm
-tarball or the package's runtime dependency graph.
+Docusaurus demo is a build-time workspace project. Docusaurus currently pulls
+in `image-size@2.0.2`, for which npm has not published an upstream patched
+version. The workspace applies `patches/image-size@2.0.2.patch` to reject
+malformed zero-length image boxes before they can loop; the package is not
+included in the npm tarball or the package's runtime dependency graph. The
+workspace's `auditConfig.ignoreGhsas` lists only these two advisories because
+the registry metadata identifies the locally patched package by its vulnerable
+version; `pnpm audit` reports them as ignored and `pnpm audit:prod` remains
+clean.
 
 ## Docusaurus plugin
 

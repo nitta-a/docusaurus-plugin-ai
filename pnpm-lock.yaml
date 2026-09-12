@@ -10,6 +10,9 @@ overrides:
   serialize-javascript: 7.1.1
   uuid: 11.1.1
 
+patchedDependencies:
+  image-size@2.0.2: 02b78baa05666d285a9e9033cf04bac2dd26ac4898dbb85e168ea34a035d46d7
+
 importers:
 
   .:
@@ -7714,7 +7717,7 @@ snapshots:
       estree-util-value-to-estree: 3.5.0
       file-loader: 6.2.0(webpack@5.110.3(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.28))(csso@5.0.5)(esbuild@0.28.2)(html-minifier-terser@7.2.0)(lightningcss@1.33.0)(postcss@8.5.28)(svgo@3.3.5))
       fs-extra: 11.4.0
-      image-size: 2.0.2
+      image-size: 2.0.2(patch_hash=02b78baa05666d285a9e9033cf04bac2dd26ac4898dbb85e168ea34a035d46d7)
       mdast-util-mdx: 3.0.0(supports-color@8.1.1)
       mdast-util-to-string: 4.0.0
       react: 19.3.0
@@ -10946,7 +10949,7 @@ snapshots:
 
   ignore@5.3.2: {}
 
-  image-size@2.0.2: {}
+  image-size@2.0.2(patch_hash=02b78baa05666d285a9e9033cf04bac2dd26ac4898dbb85e168ea34a035d46d7): {}
 
   import-fresh@3.3.1:
     dependencies:
