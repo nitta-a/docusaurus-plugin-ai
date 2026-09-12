@@ -31,6 +31,15 @@ export interface AiChatProps {
   readonly sendLabel?: string;
   readonly launcherLabel?: string;
   readonly onError?: (error: AIErrorResponse, cause: unknown) => void;
+  readonly defaultMaximized?: boolean;
+  readonly maximized?: boolean;
+  readonly onMaximizedChange?: (maximized: boolean) => void;
+  readonly maximizeLabel?: string;
+  readonly restoreLabel?: string;
+  readonly copyLabel?: string;
+  readonly copiedLabel?: string;
+  readonly copyErrorLabel?: string;
+  readonly onCopy?: (message: AiChatMessage) => void | Promise<void>;
 }
 
 const messageText = (message: Pick<UIMessage, 'parts'>) =>
@@ -107,6 +116,15 @@ export const AiChat = ({
   sendLabel,
   launcherLabel,
   onError,
+  defaultMaximized,
+  maximized,
+  onMaximizedChange,
+  maximizeLabel,
+  restoreLabel,
+  copyLabel,
+  copiedLabel,
+  copyErrorLabel,
+  onCopy,
 }: AiChatProps) => {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
   const [input, setInput] = useState('');
@@ -219,6 +237,15 @@ export const AiChat = ({
           onClose={() => setOpen(false)}
           isLoading={isLoading}
           error={error ? structuredError : undefined}
+          defaultMaximized={defaultMaximized}
+          maximized={maximized}
+          onMaximizedChange={onMaximizedChange}
+          maximizeLabel={maximizeLabel}
+          restoreLabel={restoreLabel}
+          copyLabel={copyLabel}
+          copiedLabel={copiedLabel}
+          copyErrorLabel={copyErrorLabel}
+          onCopy={onCopy}
           title={title}
           description={description}
           placeholder={placeholder}

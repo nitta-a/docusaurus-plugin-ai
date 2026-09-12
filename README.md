@@ -302,6 +302,22 @@ into the answer text. The existing core package's
 `createHttpAIProvider` remains available for integrations that prefer the
 provider-injected `AIChat` API.
 
+Each assistant answer includes a built-in `Copy answer` action. The panel can
+also expand to the viewport and restore its original size:
+
+```tsx
+<AiChat
+  endpoint="/api/ai/chat"
+  defaultMaximized={false}
+  onMaximizedChange={(maximized) => console.log('maximized', maximized)}
+  onCopy={(message) => analytics.track('ai-answer-copied', { id: message.id })}
+/>
+```
+
+Use `maximized` for controlled state, or `defaultMaximized` for an initial
+state. `maximizeLabel`, `restoreLabel`, `copyLabel`, `copiedLabel`, and
+`copyErrorLabel` allow localization without replacing the controls.
+
 ### Azure Functions communication and CORS
 
 The complete request path is:

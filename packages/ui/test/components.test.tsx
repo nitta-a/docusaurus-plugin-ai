@@ -71,4 +71,23 @@ describe('UI components', () => {
     expect(markup).toContain('trace-1');
     expect(markup).toContain('>Copy<');
   });
+
+  it('renders answer copy controls and a maximized panel state', () => {
+    const markup = renderToStaticMarkup(
+      <AiChatPanel
+        messages={[{ id: 'assistant-1', role: 'assistant', content: '回答本文' }]}
+        input=""
+        onInputChange={() => undefined}
+        onSubmit={() => undefined}
+        onClose={() => undefined}
+        isLoading={false}
+        defaultMaximized
+      />,
+    );
+
+    expect(markup).toContain('docusaurus-ai__panel--maximized');
+    expect(markup).toContain('aria-label="Restore chat size"');
+    expect(markup).toContain('aria-label="Copy answer"');
+    expect(markup).toContain('aria-pressed="true"');
+  });
 });
