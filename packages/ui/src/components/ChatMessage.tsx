@@ -10,8 +10,11 @@ export interface ChatMessageProps {
   readonly copyLabel?: string;
   readonly copiedLabel?: string;
   readonly copyErrorLabel?: string;
+  readonly regenerateLabel?: string;
   readonly renderMarkdown?: boolean;
   readonly onCopy?: (message: AiChatMessage) => void | Promise<void>;
+  readonly onRegenerate?: (message: AiChatMessage) => void | Promise<void>;
+  readonly disabled?: boolean;
 }
 
 type CopyStatus = 'idle' | 'copied' | 'error';
@@ -61,8 +64,11 @@ export const ChatMessage = ({
   copyLabel = 'Copy answer',
   copiedLabel = 'Copied',
   copyErrorLabel = 'Copy failed',
+  regenerateLabel = 'Regenerate answer',
   renderMarkdown = true,
   onCopy,
+  onRegenerate,
+  disabled = false,
 }: ChatMessageProps) => {
   const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle');
 
@@ -105,6 +111,17 @@ export const ChatMessage = ({
           >
             {copyStatus === 'copied' ? copiedLabel : copyStatus === 'error' ? copyErrorLabel : copyLabel}
           </button>
+          {onRegenerate ? (
+            <button
+              className="docusaurus-ai__regenerate"
+              type="button"
+              onClick={() => void onRegenerate(message)}
+              disabled={disabled}
+              aria-label={regenerateLabel}
+            >
+              {regenerateLabel}
+            </button>
+          ) : null}
           <span className="docusaurus-ai__sr-only" aria-live="polite">
             {copyStatus === 'copied' ? copiedLabel : copyStatus === 'error' ? copyErrorLabel : ''}
           </span>

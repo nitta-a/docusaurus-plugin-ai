@@ -55,6 +55,14 @@ export interface ChatMessage {
 export interface GenerationOptions {
   readonly temperature?: number;
   readonly maxTokens?: number;
+  readonly topP?: number;
+  readonly topK?: number;
+  readonly presencePenalty?: number;
+  readonly frequencyPenalty?: number;
+  readonly stopSequences?: readonly string[];
+  readonly seed?: number;
+  readonly maxRetries?: number;
+  readonly timeoutMs?: number;
   readonly signal?: AbortSignal;
 }
 

@@ -29,6 +29,10 @@ export interface AiChatProps {
   readonly description?: string;
   readonly placeholder?: string;
   readonly sendLabel?: string;
+  readonly stopLabel?: string;
+  readonly clearLabel?: string;
+  readonly retryLabel?: string;
+  readonly regenerateLabel?: string;
   readonly launcherLabel?: string;
   readonly onError?: (error: AIErrorResponse, cause: unknown) => void;
   readonly defaultMaximized?: boolean;
@@ -116,6 +120,10 @@ export const AiChat = ({
   description,
   placeholder,
   sendLabel,
+  stopLabel,
+  clearLabel,
+  retryLabel,
+  regenerateLabel,
   launcherLabel,
   onError,
   defaultMaximized,
@@ -196,7 +204,7 @@ export const AiChat = ({
       }),
     [captureFetch, context, credentials, endpoint, transportHeaders],
   );
-  const { messages, sendMessage, status, error } = useChat({ transport });
+  const { messages, sendMessage, regenerate, stop, setMessages, clearError, status, error } = useChat({ transport });
   let assistantIndex = 0;
   const displayMessages = messages
     .map((message) => {
@@ -207,6 +215,34 @@ export const AiChat = ({
     })
     .filter((message): message is AiChatMessage => message !== null);
   const isLoading = status === 'submitted' || status === 'streaming';
+
+  const clear = () => {
+    stop();
+    setMessages([]);
+    clearError();
+    setInput('');
+    setSourcesByResponse([]);
+    responseIndex.current = 0;
+  };
+
+  const trimSourcesForRegeneration = (messageId?: string) => {
+    const targetIndex =
+      messageId === undefined ? messages.length - 1 : messages.findIndex((message) => message.id === messageId);
+    if (targetIndex < 0) return;
+    const sourceCount = messages.slice(0, targetIndex).filter((message) => message.role === 'assistant').length;
+    setSourcesByResponse((current) => current.slice(0, sourceCount));
+  };
+
+  const retry = async () => {
+    trimSourcesForRegeneration();
+    clearError();
+    await regenerate();
+  };
+
+  const regenerateMessage = async (message: AiChatMessage) => {
+    trimSourcesForRegeneration(message.id);
+    await regenerate({ messageId: message.id });
+  };
 
   const structuredError = useMemo(
     () => (error instanceof AiChatRequestError ? error.response : parseError(error)),
@@ -237,6 +273,10 @@ export const AiChat = ({
           input={input}
           onInputChange={setInput}
           onSubmit={submit}
+          onStop={stop}
+          onClear={clear}
+          onRetry={retry}
+          onRegenerate={regenerateMessage}
           onClose={() => setOpen(false)}
           isLoading={isLoading}
           error={error ? structuredError : undefined}
@@ -254,6 +294,10 @@ export const AiChat = ({
           description={description}
           placeholder={placeholder}
           sendLabel={sendLabel}
+          stopLabel={stopLabel}
+          clearLabel={clearLabel}
+          retryLabel={retryLabel}
+          regenerateLabel={regenerateLabel}
         />
       ) : null}
       <AiChatButton isOpen={isOpen} onClick={() => setOpen(!isOpen)} label={launcherLabel} />

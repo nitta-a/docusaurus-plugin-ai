@@ -6,11 +6,33 @@ describe('validateAIRequest', () => {
     expect(
       validateAIRequest({
         messages: [{ role: 'user', content: '  How do I configure it?  ' }],
-        options: { maxTokens: 128, temperature: 0.4 },
+        options: {
+          maxTokens: 128,
+          temperature: 0.4,
+          topP: 0.8,
+          topK: 20,
+          presencePenalty: 0.1,
+          frequencyPenalty: 0.2,
+          stopSequences: ['END'],
+          seed: 7,
+          maxRetries: 1,
+          timeoutMs: 30000,
+        },
       }),
     ).toEqual({
       messages: [{ role: 'user', content: '  How do I configure it?  ' }],
-      options: { maxTokens: 128, temperature: 0.4 },
+      options: {
+        maxTokens: 128,
+        temperature: 0.4,
+        topP: 0.8,
+        topK: 20,
+        presencePenalty: 0.1,
+        frequencyPenalty: 0.2,
+        stopSequences: ['END'],
+        seed: 7,
+        maxRetries: 1,
+        timeoutMs: 30000,
+      },
     });
   });
 
@@ -49,5 +71,20 @@ describe('validateAIRequest', () => {
     expect(() =>
       validateAIRequest({ messages: [{ role: 'user', content: 'question' }], options: { temperature: 2.1 } }),
     ).toThrow('options.temperature must be a finite number between 0 and 2');
+    expect(() =>
+      validateAIRequest({ messages: [{ role: 'user', content: 'question' }], options: { maxRetries: 4 } }),
+    ).toThrow('options.maxRetries must be an integer between 0 and 3');
+    expect(() =>
+      validateAIRequest({ messages: [{ role: 'user', content: 'question' }], options: { timeoutMs: 999 } }),
+    ).toThrow('options.timeoutMs must be an integer between 1000 and 120000');
+    expect(() =>
+      validateAIRequest({ messages: [{ role: 'user', content: 'question' }], options: { stopSequences: ['END', 1] } }),
+    ).toThrow('options.stopSequences must be an array of strings');
+    expect(() =>
+      validateAIRequest({ messages: [{ role: 'user', content: 'question' }], options: { topP: Number.NaN } }),
+    ).toThrow('options.topP must be a finite number');
+    expect(() =>
+      validateAIRequest({ messages: [{ role: 'user', content: 'question' }], options: { providerOptions: {} } }),
+    ).toThrow('options.providerOptions is not accepted from browser requests');
   });
 });

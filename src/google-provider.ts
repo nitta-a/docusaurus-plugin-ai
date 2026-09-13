@@ -1,28 +1,21 @@
-import { createOpenAI } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createVercelAIProvider, type VercelAIProviderOptions } from './ai-sdk-provider.js';
 import type { LLMProvider } from './core/types.js';
 
-export interface OpenAIProviderOptions extends Omit<VercelAIProviderOptions, 'createModel'> {
+export interface GoogleProviderOptions extends Omit<VercelAIProviderOptions, 'createModel'> {
   apiKey?: string;
   baseURL?: string;
-  organization?: string;
-  project?: string;
   headers?: Record<string, string>;
 }
 
 /**
- * Create an OpenAI-backed provider using the Vercel AI SDK.
- *
- * When apiKey is omitted, the underlying SDK reads its usual environment
- * configuration. Keep this provider on the server for production Docusaurus
- * deployments so credentials are not bundled into the static site.
+ * Create a Google Gemini-backed provider using the Vercel AI SDK.
+ * When apiKey is omitted, the SDK reads GOOGLE_GENERATIVE_AI_API_KEY.
  */
-export const createOpenAIProvider = ({
+export const createGoogleProvider = ({
   model,
   apiKey,
   baseURL,
-  organization,
-  project,
   headers,
   system,
   maxOutputTokens,
@@ -36,18 +29,16 @@ export const createOpenAIProvider = ({
   maxRetries,
   timeoutMs,
   providerOptions,
-}: OpenAIProviderOptions): LLMProvider => {
-  const openai = createOpenAI({
+}: GoogleProviderOptions): LLMProvider => {
+  const google = createGoogleGenerativeAI({
     ...(apiKey === undefined ? {} : { apiKey }),
     ...(baseURL === undefined ? {} : { baseURL }),
-    ...(organization === undefined ? {} : { organization }),
-    ...(project === undefined ? {} : { project }),
     ...(headers === undefined ? {} : { headers }),
   });
 
   return createVercelAIProvider({
     model,
-    createModel: (modelId) => openai(modelId),
+    createModel: (modelId) => google(modelId),
     ...(system === undefined ? {} : { system }),
     ...(maxOutputTokens === undefined ? {} : { maxOutputTokens }),
     ...(temperature === undefined ? {} : { temperature }),

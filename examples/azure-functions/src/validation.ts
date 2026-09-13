@@ -6,6 +6,14 @@ type ChatMessage = {
 type GenerationOptions = {
   readonly temperature?: number;
   readonly maxTokens?: number;
+  readonly topP?: number;
+  readonly topK?: number;
+  readonly presencePenalty?: number;
+  readonly frequencyPenalty?: number;
+  readonly stopSequences?: readonly string[];
+  readonly seed?: number;
+  readonly maxRetries?: number;
+  readonly timeoutMs?: number;
 };
 
 export interface ValidatedAIRequest {
@@ -82,8 +90,19 @@ export const validateAIRequest = (
   // Accept the documented envelope and the flat shape from the initial guard
   // proposal so existing callers can migrate without bypassing the limits.
   const rawOptions = options === undefined ? body : (options as Record<string, unknown>);
+  if (rawOptions?.providerOptions !== undefined) {
+    throw invalid('options.providerOptions is not accepted from browser requests.');
+  }
   const maxTokens = rawOptions?.maxTokens;
   const temperature = rawOptions?.temperature;
+  const topP = rawOptions?.topP;
+  const topK = rawOptions?.topK;
+  const presencePenalty = rawOptions?.presencePenalty;
+  const frequencyPenalty = rawOptions?.frequencyPenalty;
+  const stopSequences = rawOptions?.stopSequences;
+  const seed = rawOptions?.seed;
+  const maxRetries = rawOptions?.maxRetries;
+  const timeoutMs = rawOptions?.timeoutMs;
 
   if (
     maxTokens !== undefined &&
@@ -100,12 +119,49 @@ export const validateAIRequest = (
   ) {
     throw invalid('options.temperature must be a finite number between 0 and 2.');
   }
+  for (const [name, value] of [
+    ['topP', topP],
+    ['topK', topK],
+    ['presencePenalty', presencePenalty],
+    ['frequencyPenalty', frequencyPenalty],
+    ['seed', seed],
+  ] as const) {
+    if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) {
+      throw invalid(`options.${name} must be a finite number.`);
+    }
+  }
+  if (
+    maxRetries !== undefined &&
+    (typeof maxRetries !== 'number' || !Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 3)
+  ) {
+    throw invalid('options.maxRetries must be an integer between 0 and 3.');
+  }
+  if (
+    timeoutMs !== undefined &&
+    (typeof timeoutMs !== 'number' || !Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 120000)
+  ) {
+    throw invalid('options.timeoutMs must be an integer between 1000 and 120000.');
+  }
+  if (
+    stopSequences !== undefined &&
+    (!Array.isArray(stopSequences) || !stopSequences.every((value) => typeof value === 'string'))
+  ) {
+    throw invalid('options.stopSequences must be an array of strings.');
+  }
 
   const validatedMaxTokens = maxTokens === undefined ? constraints.defaultMaxTokens : (maxTokens as number);
   const validatedTemperature = temperature === undefined ? constraints.defaultTemperature : temperature;
   const validatedOptions: GenerationOptions = {
     maxTokens: validatedMaxTokens,
     temperature: validatedTemperature,
+    ...(topP === undefined ? {} : { topP: topP as number }),
+    ...(topK === undefined ? {} : { topK: topK as number }),
+    ...(presencePenalty === undefined ? {} : { presencePenalty: presencePenalty as number }),
+    ...(frequencyPenalty === undefined ? {} : { frequencyPenalty: frequencyPenalty as number }),
+    ...(stopSequences === undefined ? {} : { stopSequences: stopSequences as string[] }),
+    ...(seed === undefined ? {} : { seed: seed as number }),
+    ...(maxRetries === undefined ? {} : { maxRetries: maxRetries as number }),
+    ...(timeoutMs === undefined ? {} : { timeoutMs: timeoutMs as number }),
   };
   return {
     messages: validatedMessages,

@@ -9,6 +9,8 @@ export interface ChatInputProps {
   readonly disabled?: boolean;
   readonly label?: string;
   readonly submitLabel?: string;
+  readonly onStop?: () => void;
+  readonly stopLabel?: string;
 }
 
 /** Accessible chat form. Enter submits; Shift+Enter keeps a newline. */
@@ -20,6 +22,8 @@ export const ChatInput = ({
   disabled = false,
   label = 'Question',
   submitLabel = 'Send',
+  onStop,
+  stopLabel = 'Stop generating',
 }: ChatInputProps) => {
   const formRef = useRef<HTMLFormElement>(null);
   const inputId = 'docusaurus-ai-chat-input';
@@ -54,14 +58,26 @@ export const ChatInput = ({
         rows={2}
         autoComplete="off"
       />
-      <button
-        className="docusaurus-ai__submit"
-        type="submit"
-        disabled={disabled || value.trim().length === 0}
-        aria-label={submitLabel}
-      >
-        {submitLabel}
-      </button>
+      {onStop ? (
+        <button
+          className="docusaurus-ai__stop"
+          type="button"
+          onClick={onStop}
+          disabled={!disabled}
+          aria-label={stopLabel}
+        >
+          {stopLabel}
+        </button>
+      ) : (
+        <button
+          className="docusaurus-ai__submit"
+          type="submit"
+          disabled={disabled || value.trim().length === 0}
+          aria-label={submitLabel}
+        >
+          {submitLabel}
+        </button>
+      )}
     </form>
   );
 };

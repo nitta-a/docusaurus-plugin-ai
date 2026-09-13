@@ -1,13 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DocumentChunk, LLMProvider } from '../src/index.js';
-import { createLocalAIProvider, createOpenAIProvider, createVercelAIProvider, searchDocuments } from '../src/index.js';
+import {
+  createAnthropicProvider,
+  createGoogleProvider,
+  createLocalAIProvider,
+  createOpenAIProvider,
+  createVercelAIProvider,
+  searchDocuments,
+} from '../src/index.js';
 
 const generateTextMock = vi.hoisted(() => vi.fn());
 const streamTextMock = vi.hoisted(() => vi.fn());
 const createOpenAIMock = vi.hoisted(() => vi.fn());
+const createGoogleGenerativeAIMock = vi.hoisted(() => vi.fn());
+const createAnthropicMock = vi.hoisted(() => vi.fn());
 
 vi.mock('ai', () => ({ generateText: generateTextMock, streamText: streamTextMock }));
 vi.mock('@ai-sdk/openai', () => ({ createOpenAI: createOpenAIMock }));
+vi.mock('@ai-sdk/google', () => ({ createGoogleGenerativeAI: createGoogleGenerativeAIMock }));
+vi.mock('@ai-sdk/anthropic', () => ({ createAnthropic: createAnthropicMock }));
 
 describe('LLMProvider', () => {
   beforeEach(() => {
@@ -121,6 +132,72 @@ describe('LLMProvider', () => {
     expect(call.instructions).toBe('Follow the application policy.\n\nRetrieved documentation context.');
   });
 
+  it('maps generation defaults and request overrides without leaking SDK types', async () => {
+    generateTextMock.mockResolvedValue({ text: 'Configured answer', usage: {} });
+    const providerOptions = { gateway: { models: ['openai/gpt-5-nano'] } };
+    const provider = createVercelAIProvider({
+      model: 'gpt-5-mini',
+      createModel: () => ({ provider: 'gateway' }),
+      maxOutputTokens: 400,
+      temperature: 0.7,
+      topP: 0.8,
+      topK: 20,
+      presencePenalty: 0.1,
+      frequencyPenalty: 0.2,
+      stopSequences: ['END'],
+      seed: 1,
+      maxRetries: 1,
+      timeoutMs: 30000,
+      providerOptions,
+    });
+
+    await provider.generate([{ role: 'user', content: 'Default question' }]);
+    expect(generateTextMock).toHaveBeenNthCalledWith(1, {
+      model: { provider: 'gateway' },
+      messages: [{ role: 'user', content: 'Default question' }],
+      maxOutputTokens: 400,
+      temperature: 0.7,
+      topP: 0.8,
+      topK: 20,
+      presencePenalty: 0.1,
+      frequencyPenalty: 0.2,
+      stopSequences: ['END'],
+      seed: 1,
+      maxRetries: 1,
+      timeout: 30000,
+      providerOptions,
+    });
+
+    await provider.generate([{ role: 'user', content: 'Question' }], {
+      maxTokens: 200,
+      temperature: 0.2,
+      topP: 0.5,
+      topK: 10,
+      presencePenalty: 0,
+      frequencyPenalty: 0,
+      stopSequences: ['DONE'],
+      seed: 2,
+      maxRetries: 0,
+      timeoutMs: 5000,
+    });
+
+    expect(generateTextMock).toHaveBeenNthCalledWith(2, {
+      model: { provider: 'gateway' },
+      messages: [{ role: 'user', content: 'Question' }],
+      maxOutputTokens: 200,
+      temperature: 0.2,
+      topP: 0.5,
+      topK: 10,
+      presencePenalty: 0,
+      frequencyPenalty: 0,
+      stopSequences: ['DONE'],
+      seed: 2,
+      maxRetries: 0,
+      timeout: 5000,
+      providerOptions,
+    });
+  });
+
   it('provides an OpenAI adapter through the same contract', async () => {
     const model = { provider: 'openai', modelId: 'gpt-4o-mini' };
     createOpenAIMock.mockReturnValue(() => model);
@@ -133,6 +210,76 @@ describe('LLMProvider', () => {
       model: 'gpt-4o-mini',
     });
     expect(createOpenAIMock).toHaveBeenCalledWith({ apiKey: 'test-key' });
+  });
+
+  it('forwards extended generation defaults through the OpenAI adapter', async () => {
+    generateTextMock.mockResolvedValue({ text: 'OpenAI configured answer', usage: {} });
+    const providerOptions = { openai: { reasoningEffort: 'low' } };
+    const provider = createOpenAIProvider({
+      model: 'gpt-4o-mini',
+      apiKey: 'test-key',
+      topP: 0.8,
+      topK: 20,
+      presencePenalty: 0.1,
+      frequencyPenalty: 0.2,
+      stopSequences: ['END'],
+      seed: 1,
+      maxRetries: 1,
+      timeoutMs: 30000,
+      providerOptions,
+    });
+
+    await provider.generate([{ role: 'user', content: 'Hello' }]);
+
+    expect(generateTextMock).toHaveBeenCalledWith({
+      model: { provider: 'openai', modelId: 'gpt-4o-mini' },
+      messages: [{ role: 'user', content: 'Hello' }],
+      topP: 0.8,
+      topK: 20,
+      presencePenalty: 0.1,
+      frequencyPenalty: 0.2,
+      stopSequences: ['END'],
+      seed: 1,
+      maxRetries: 1,
+      timeout: 30000,
+      providerOptions,
+    });
+  });
+
+  it('provides a Google Gemini adapter through the same contract', async () => {
+    const model = { provider: 'google.generative-ai', modelId: 'gemini-2.5-flash' };
+    createGoogleGenerativeAIMock.mockReturnValue(() => model);
+    generateTextMock.mockResolvedValue({ text: 'Gemini answer', usage: {} });
+
+    const provider = createGoogleProvider({ model: 'gemini-2.5-flash', apiKey: 'google-test-key' });
+
+    await expect(provider.generate([{ role: 'user', content: 'Hello' }])).resolves.toMatchObject({
+      content: 'Gemini answer',
+      model: 'gemini-2.5-flash',
+    });
+    expect(createGoogleGenerativeAIMock).toHaveBeenCalledWith({ apiKey: 'google-test-key' });
+    expect(generateTextMock).toHaveBeenCalledWith({
+      model,
+      messages: [{ role: 'user', content: 'Hello' }],
+    });
+  });
+
+  it('provides a Claude adapter through the same contract', async () => {
+    const model = { provider: 'anthropic.messages', modelId: 'claude-sonnet-4-5' };
+    createAnthropicMock.mockReturnValue(() => model);
+    generateTextMock.mockResolvedValue({ text: 'Claude answer', usage: {} });
+
+    const provider = createAnthropicProvider({ model: 'claude-sonnet-4-5', apiKey: 'anthropic-test-key' });
+
+    await expect(provider.generate([{ role: 'user', content: 'Hello' }])).resolves.toMatchObject({
+      content: 'Claude answer',
+      model: 'claude-sonnet-4-5',
+    });
+    expect(createAnthropicMock).toHaveBeenCalledWith({ apiKey: 'anthropic-test-key' });
+    expect(generateTextMock).toHaveBeenCalledWith({
+      model,
+      messages: [{ role: 'user', content: 'Hello' }],
+    });
   });
 
   it('adapts AI SDK text deltas to the streaming contract', async () => {
@@ -151,7 +298,17 @@ describe('LLMProvider', () => {
         { role: 'system', content: 'Use the retrieved context.' },
         { role: 'user', content: 'Hello?' },
       ],
-      { temperature: 0.2 },
+      {
+        temperature: 0.2,
+        topP: 0.5,
+        topK: 10,
+        presencePenalty: 0,
+        frequencyPenalty: 0,
+        stopSequences: ['DONE'],
+        seed: 2,
+        maxRetries: 0,
+        timeoutMs: 5000,
+      },
     );
 
     expect(response?.sources).toBeUndefined();
@@ -164,6 +321,14 @@ describe('LLMProvider', () => {
       messages: [{ role: 'user', content: 'Hello?' }],
       instructions: 'Use the retrieved context.',
       temperature: 0.2,
+      topP: 0.5,
+      topK: 10,
+      presencePenalty: 0,
+      frequencyPenalty: 0,
+      stopSequences: ['DONE'],
+      seed: 2,
+      maxRetries: 0,
+      timeout: 5000,
     });
   });
 

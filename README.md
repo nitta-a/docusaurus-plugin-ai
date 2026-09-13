@@ -162,6 +162,13 @@ Other AI SDK providers can use `createVercelAIProvider` with an application-owne
 model factory. Keep credentials on the server; do not bundle provider keys into
 the static Docusaurus site.
 
+The adapter also supports common AI SDK generation controls such as
+`maxRetries`, `timeoutMs`, `topP`, `topK`, penalties, stop sequences, and `seed`.
+Per-request values override adapter defaults. `timeoutMs` is converted to the AI
+SDK `timeout` option. `signal` remains an abort signal and is not serialized by
+the HTTP provider. Provider-specific `providerOptions` are server-side adapter
+configuration only and must not come from browser input.
+
 `createVercelAIProvider` is compatible with AI SDK 7: it detects every
 `role: 'system'` message, removes those messages from `messages`, and combines
 their content into the `instructions` option. The configured `system` value is
@@ -169,6 +176,73 @@ placed first, followed by RAG context, preserving the instruction order. This
 also applies to `createOpenAIProvider` and to Azure, Bedrock, or other adapters
 that supply a model factory. Applications do not need to rewrite
 `createRAGProvider` output.
+
+#### Vercel AI Gateway
+
+Use the existing model factory with the AI SDK Gateway when the server needs
+provider routing or model fallbacks. No additional provider package or
+`createGatewayProvider` API is required:
+
+Install the AI SDK in the server application because the application imports
+`gateway` directly:
+
+```bash
+pnpm add ai
+```
+
+```ts
+import { gateway } from 'ai';
+import { createVercelAIProvider } from '@docusaurus-plugin-ai/core';
+
+const provider = createVercelAIProvider({
+  model: 'openai/gpt-5-mini',
+  createModel: (modelId) => gateway(modelId),
+  providerOptions: {
+    gateway: {
+      models: ['openai/gpt-5-nano', 'google/gemini-2.5-flash'],
+    },
+  },
+});
+```
+
+Initialize Gateway only in the server-side endpoint. Keep its credentials out
+of the static Docusaurus bundle. Configure Gateway authentication through the
+deployment environment, and use its server-side routing/fallback settings for
+provider selection.
+
+#### Google Gemini
+
+Install the Google provider in the server application:
+
+```bash
+pnpm add @ai-sdk/google
+```
+
+```ts
+import { createGoogleProvider } from '@docusaurus-plugin-ai/core';
+
+const provider = createGoogleProvider({
+  model: 'gemini-2.5-flash',
+  // Omit apiKey to use GOOGLE_GENERATIVE_AI_API_KEY.
+});
+```
+
+#### Claude / Anthropic
+
+Install the Anthropic provider in the server application:
+
+```bash
+pnpm add @ai-sdk/anthropic
+```
+
+```ts
+import { createAnthropicProvider } from '@docusaurus-plugin-ai/core';
+
+const provider = createAnthropicProvider({
+  model: 'claude-sonnet-4-5',
+  // Omit apiKey to use ANTHROPIC_API_KEY.
+});
+```
 
 ### Azure OpenAI with Microsoft Entra ID
 
@@ -323,6 +397,11 @@ also expand to the viewport and restore its original size:
 Use `maximized` for controlled state, or `defaultMaximized` for an initial
 state. `maximizeLabel`, `restoreLabel`, `copyLabel`, `copiedLabel`, and
 `copyErrorLabel` allow localization without replacing the controls.
+
+The chat also supports stopping an active generation, retrying the last failed
+request, regenerating an assistant answer, and clearing the conversation. These
+controls are shown automatically when using `AiChat`; customize their labels
+with `stopLabel`, `retryLabel`, `regenerateLabel`, and `clearLabel`.
 
 Assistant answers are rendered as safe Markdown with GitHub Flavored Markdown
 support for headings, lists, links, code blocks, tables, and task lists. Raw

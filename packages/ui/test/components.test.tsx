@@ -92,6 +92,38 @@ describe('UI components', () => {
     expect(markup).toContain('aria-pressed="true"');
   });
 
+  it('renders clear, retry, and stop controls for an active chat', () => {
+    const markup = renderToStaticMarkup(
+      <AiChatPanel
+        messages={[{ id: 'user-1', role: 'user', content: 'Question' }]}
+        input=""
+        onInputChange={() => undefined}
+        onSubmit={() => undefined}
+        onStop={() => undefined}
+        onClear={() => undefined}
+        onRetry={() => undefined}
+        onClose={() => undefined}
+        isLoading
+        error={{ error: 'Request failed' }}
+      />,
+    );
+
+    expect(markup).toContain('aria-label="Clear chat"');
+    expect(markup).toContain('>Retry<');
+    expect(markup).toContain('aria-label="Stop generating"');
+  });
+
+  it('renders an assistant regeneration control when provided', () => {
+    const markup = renderToStaticMarkup(
+      <ChatMessage
+        message={{ id: 'assistant-1', role: 'assistant', content: '回答本文' }}
+        onRegenerate={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain('aria-label="Regenerate answer"');
+  });
+
   it('renders assistant answers as safe Markdown with GFM support', () => {
     const markup = renderToStaticMarkup(
       <ChatMessage

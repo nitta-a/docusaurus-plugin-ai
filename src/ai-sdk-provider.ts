@@ -25,6 +25,16 @@ export interface VercelAIProviderOptions {
   system?: string;
   maxOutputTokens?: number;
   temperature?: number;
+  topP?: number;
+  topK?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  stopSequences?: readonly string[];
+  seed?: number;
+  maxRetries?: number;
+  timeoutMs?: number;
+  /** Server-side AI SDK provider options. Never accept this from browser input. */
+  providerOptions?: Readonly<Record<string, unknown>>;
 }
 
 const isFiniteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
@@ -83,14 +93,44 @@ export const createVercelAIProvider = ({
   system,
   maxOutputTokens,
   temperature,
+  topP,
+  topK,
+  presencePenalty,
+  frequencyPenalty,
+  stopSequences,
+  seed,
+  maxRetries,
+  timeoutMs,
+  providerOptions,
 }: VercelAIProviderOptions): LLMProvider => {
   const resolveOptions = (options?: GenerationOptions) => {
     const resolvedMaxOutputTokens = options?.maxTokens ?? maxOutputTokens;
     const resolvedTemperature = options?.temperature ?? temperature;
+    const resolvedTopP = options?.topP ?? topP;
+    const resolvedTopK = options?.topK ?? topK;
+    const resolvedPresencePenalty = options?.presencePenalty ?? presencePenalty;
+    const resolvedFrequencyPenalty = options?.frequencyPenalty ?? frequencyPenalty;
+    const resolvedStopSequences = options?.stopSequences ?? stopSequences;
+    const resolvedSeed = options?.seed ?? seed;
+    const resolvedMaxRetries = options?.maxRetries ?? maxRetries;
+    const resolvedTimeoutMs = options?.timeoutMs ?? timeoutMs;
     return {
       ...(resolvedMaxOutputTokens === undefined ? {} : { maxOutputTokens: resolvedMaxOutputTokens }),
       ...(resolvedTemperature === undefined ? {} : { temperature: resolvedTemperature }),
+      ...(resolvedTopP === undefined ? {} : { topP: resolvedTopP }),
+      ...(resolvedTopK === undefined ? {} : { topK: resolvedTopK }),
+      ...(resolvedPresencePenalty === undefined ? {} : { presencePenalty: resolvedPresencePenalty }),
+      ...(resolvedFrequencyPenalty === undefined ? {} : { frequencyPenalty: resolvedFrequencyPenalty }),
+      ...(resolvedStopSequences === undefined ? {} : { stopSequences: [...resolvedStopSequences] }),
+      ...(resolvedSeed === undefined ? {} : { seed: resolvedSeed }),
+      ...(resolvedMaxRetries === undefined ? {} : { maxRetries: resolvedMaxRetries }),
+      ...(resolvedTimeoutMs === undefined ? {} : { timeout: resolvedTimeoutMs }),
       ...(options?.signal === undefined ? {} : { abortSignal: options.signal }),
+      ...(providerOptions === undefined
+        ? {}
+        : {
+            providerOptions: providerOptions as NonNullable<Parameters<typeof generateText>[0]['providerOptions']>,
+          }),
     };
   };
 

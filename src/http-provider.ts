@@ -40,6 +40,14 @@ interface HttpRequestBody {
   readonly options?: {
     readonly temperature?: number;
     readonly maxTokens?: number;
+    readonly topP?: number;
+    readonly topK?: number;
+    readonly presencePenalty?: number;
+    readonly frequencyPenalty?: number;
+    readonly stopSequences?: readonly string[];
+    readonly seed?: number;
+    readonly maxRetries?: number;
+    readonly timeoutMs?: number;
   };
 }
 
@@ -111,6 +119,14 @@ const toRequestOptions = (options?: GenerationOptions): HttpRequestBody['options
   const requestOptions = {
     ...(options?.temperature === undefined ? {} : { temperature: options.temperature }),
     ...(options?.maxTokens === undefined ? {} : { maxTokens: options.maxTokens }),
+    ...(options?.topP === undefined ? {} : { topP: options.topP }),
+    ...(options?.topK === undefined ? {} : { topK: options.topK }),
+    ...(options?.presencePenalty === undefined ? {} : { presencePenalty: options.presencePenalty }),
+    ...(options?.frequencyPenalty === undefined ? {} : { frequencyPenalty: options.frequencyPenalty }),
+    ...(options?.stopSequences === undefined ? {} : { stopSequences: options.stopSequences }),
+    ...(options?.seed === undefined ? {} : { seed: options.seed }),
+    ...(options?.maxRetries === undefined ? {} : { maxRetries: options.maxRetries }),
+    ...(options?.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
   };
   return Object.keys(requestOptions).length > 0 ? requestOptions : undefined;
 };

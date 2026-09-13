@@ -23,6 +23,27 @@ describe('AIChat streaming and citations', () => {
     expect(updates).toEqual(['日本語', '日本語の回答']);
   });
 
+  it('keeps the partial answer when stream consumption is aborted', async () => {
+    const controller = new AbortController();
+    const updates: string[] = [];
+    const stream = (async function* () {
+      yield '途中まで';
+      yield 'この分は無視';
+    })();
+
+    await expect(
+      consumeAIStream(
+        stream,
+        (content) => {
+          updates.push(content);
+          controller.abort();
+        },
+        controller.signal,
+      ),
+    ).resolves.toBe('途中まで');
+    expect(updates).toEqual(['途中まで']);
+  });
+
   it('renders citation links and optional snippets semantically', () => {
     const markup = renderToStaticMarkup(
       <AIChatSources

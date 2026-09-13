@@ -27,8 +27,12 @@
 .docusaurus-ai__launcher:focus-visible,
 .docusaurus-ai__close:focus-visible,
 .docusaurus-ai__maximize:focus-visible,
+.docusaurus-ai__clear:focus-visible,
 .docusaurus-ai__copy:focus-visible,
+.docusaurus-ai__retry:focus-visible,
+.docusaurus-ai__regenerate:focus-visible,
 .docusaurus-ai__submit:focus-visible,
+.docusaurus-ai__stop:focus-visible,
 .docusaurus-ai__textarea:focus-visible {
   outline: 2px solid var(--docusaurus-ai-accent);
   outline-offset: 2px;
@@ -112,8 +116,26 @@
   font-size: 1.15rem;
 }
 
+.docusaurus-ai__clear,
+.docusaurus-ai__retry {
+  border: 0;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--docusaurus-ai-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.4rem;
+}
+
+.docusaurus-ai__clear:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .docusaurus-ai__maximize:hover,
 .docusaurus-ai__close:hover,
+.docusaurus-ai__clear:hover,
 .docusaurus-ai__copy:hover {
   background: color-mix(in srgb, var(--docusaurus-ai-accent) 12%, transparent);
 }
@@ -225,6 +247,22 @@
   padding: 0.25rem 0.4rem;
 }
 
+.docusaurus-ai__regenerate {
+  border: 0;
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--docusaurus-ai-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.4rem;
+}
+
+.docusaurus-ai__regenerate:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .docusaurus-ai__copy:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -274,6 +312,16 @@
 .docusaurus-ai__submit:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.docusaurus-ai__stop {
+  border: 0;
+  border-radius: 0.45rem;
+  background: var(--docusaurus-ai-accent);
+  color: #fff;
+  cursor: pointer;
+  padding: 0.58rem 0.7rem;
+  font: inherit;
 }
 
 .docusaurus-ai__sr-only {

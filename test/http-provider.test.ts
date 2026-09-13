@@ -18,9 +18,22 @@ describe('createHttpAIProvider', () => {
       fetch: fetchMock,
       headers: { authorization: 'Bearer test' },
     });
+    const controller = new AbortController();
 
     await expect(
-      provider.generate([{ role: 'user', content: '質問' }], { temperature: 0.2, maxTokens: 100 }),
+      provider.generate([{ role: 'user', content: '質問' }], {
+        temperature: 0.2,
+        maxTokens: 100,
+        topP: 0.8,
+        topK: 20,
+        presencePenalty: 0.1,
+        frequencyPenalty: 0.2,
+        stopSequences: ['END'],
+        seed: 1,
+        maxRetries: 1,
+        timeoutMs: 30000,
+        signal: controller.signal,
+      }),
     ).resolves.toEqual({
       content: '回答',
       model: 'azure-deployment',
@@ -33,8 +46,21 @@ describe('createHttpAIProvider', () => {
     expect(new Headers(request?.headers).get('accept')).toBe('application/json');
     expect(JSON.parse(String(request?.body))).toEqual({
       messages: [{ role: 'user', content: '質問' }],
-      options: { temperature: 0.2, maxTokens: 100 },
+      options: {
+        temperature: 0.2,
+        maxTokens: 100,
+        topP: 0.8,
+        topK: 20,
+        presencePenalty: 0.1,
+        frequencyPenalty: 0.2,
+        stopSequences: ['END'],
+        seed: 1,
+        maxRetries: 1,
+        timeoutMs: 30000,
+      },
     });
+    expect(request?.signal).toBe(controller.signal);
+    expect(JSON.parse(String(request?.body))).not.toHaveProperty('options.providerOptions');
   });
 
   it('decodes UTF-8 text streams and exposes citations from the response header', async () => {

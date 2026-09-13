@@ -8,6 +8,9 @@ export interface AiChatPanelProps {
   readonly input: string;
   readonly onInputChange: (value: string) => void;
   readonly onSubmit: () => void | Promise<void>;
+  readonly onStop?: () => void;
+  readonly onClear?: () => void;
+  readonly onRetry?: () => void | Promise<void>;
   readonly onClose: () => void;
   readonly isLoading: boolean;
   readonly error?: AIErrorResponse;
@@ -19,12 +22,17 @@ export interface AiChatPanelProps {
   readonly copyLabel?: string;
   readonly copiedLabel?: string;
   readonly copyErrorLabel?: string;
+  readonly regenerateLabel?: string;
   readonly renderMarkdown?: boolean;
   readonly onCopy?: (message: AiChatMessage) => void | Promise<void>;
+  readonly onRegenerate?: (message: AiChatMessage) => void | Promise<void>;
   readonly title?: string;
   readonly description?: string;
   readonly placeholder?: string;
   readonly sendLabel?: string;
+  readonly stopLabel?: string;
+  readonly clearLabel?: string;
+  readonly retryLabel?: string;
   readonly userLabel?: string;
   readonly assistantLabel?: string;
 }
@@ -35,6 +43,9 @@ export const AiChatPanel = ({
   input,
   onInputChange,
   onSubmit,
+  onStop,
+  onClear,
+  onRetry,
   onClose,
   isLoading,
   error,
@@ -46,12 +57,17 @@ export const AiChatPanel = ({
   copyLabel,
   copiedLabel,
   copyErrorLabel,
+  regenerateLabel,
   renderMarkdown,
   onCopy,
+  onRegenerate,
   title = 'Ask AI',
   description,
   placeholder,
   sendLabel,
+  stopLabel,
+  clearLabel = 'Clear chat',
+  retryLabel = 'Retry',
   userLabel,
   assistantLabel,
 }: AiChatPanelProps) => {
@@ -80,6 +96,18 @@ export const AiChatPanel = ({
           {description ? <p>{description}</p> : null}
         </div>
         <div className="docusaurus-ai__header-actions">
+          {onClear ? (
+            <button
+              className="docusaurus-ai__clear"
+              type="button"
+              onClick={onClear}
+              disabled={messages.length === 0 && !error}
+              aria-label={clearLabel}
+              title={clearLabel}
+            >
+              {clearLabel}
+            </button>
+          ) : null}
           <button
             className="docusaurus-ai__maximize"
             type="button"
@@ -108,8 +136,11 @@ export const AiChatPanel = ({
             copyLabel={copyLabel}
             copiedLabel={copiedLabel}
             copyErrorLabel={copyErrorLabel}
+            regenerateLabel={regenerateLabel}
             renderMarkdown={renderMarkdown}
             onCopy={onCopy}
+            onRegenerate={onRegenerate}
+            disabled={isLoading}
           />
         ))}
         {isLoading ? (
@@ -118,13 +149,15 @@ export const AiChatPanel = ({
           </p>
         ) : null}
       </div>
-      {error ? <AiChatError error={error} /> : null}
+      {error ? <AiChatError error={error} onRetry={onRetry} retryLabel={retryLabel} /> : null}
       <ChatInput
         value={input}
         onChange={onInputChange}
         onSubmit={onSubmit}
         placeholder={placeholder}
         submitLabel={sendLabel}
+        onStop={isLoading ? onStop : undefined}
+        stopLabel={stopLabel}
         disabled={isLoading}
       />
     </section>
@@ -136,7 +169,15 @@ const copyTraceId = async (traceId: string): Promise<void> => {
   await navigator.clipboard.writeText(traceId);
 };
 
-const AiChatError = ({ error }: { readonly error: AIErrorResponse }) => (
+const AiChatError = ({
+  error,
+  onRetry,
+  retryLabel,
+}: {
+  readonly error: AIErrorResponse;
+  readonly onRetry?: () => void | Promise<void>;
+  readonly retryLabel: string;
+}) => (
   <div className="docusaurus-ai__error" role="alert">
     <p>{error.error}</p>
     {error.code ? <p data-error-code={`error-code-${error.code}`}>Code: {error.code}</p> : null}
@@ -149,6 +190,11 @@ const AiChatError = ({ error }: { readonly error: AIErrorResponse }) => (
           Copy
         </button>
       </p>
+    ) : null}
+    {onRetry ? (
+      <button type="button" className="docusaurus-ai__retry" onClick={() => void onRetry()}>
+        {retryLabel}
+      </button>
     ) : null}
   </div>
 );

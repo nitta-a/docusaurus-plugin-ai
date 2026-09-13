@@ -18,6 +18,7 @@ interface LambdaHttpEvent {
 interface RequestBody {
   readonly messages?: unknown;
   readonly options?: unknown;
+  readonly providerOptions?: unknown;
 }
 
 interface AIErrorResponse {
@@ -72,23 +73,74 @@ const parseBody = (event: LambdaHttpEvent): { messages: readonly ChatMessage[]; 
   if (!Array.isArray(body.messages) || !body.messages.every(isChatMessage)) {
     throw new Error('Request body must contain a messages array.');
   }
+  if (body.providerOptions !== undefined) {
+    throw new Error('options.providerOptions is not accepted from browser requests.');
+  }
 
   if (body.options === undefined) return { messages: body.messages };
   if (!body.options || typeof body.options !== 'object') throw new Error('Request options must be an object.');
   const options = body.options as Record<string, unknown>;
+  if (options.providerOptions !== undefined) {
+    throw new Error('options.providerOptions is not accepted from browser requests.');
+  }
   const temperature = options.temperature;
   const maxTokens = options.maxTokens;
+  const topP = options.topP;
+  const topK = options.topK;
+  const presencePenalty = options.presencePenalty;
+  const frequencyPenalty = options.frequencyPenalty;
+  const stopSequences = options.stopSequences;
+  const seed = options.seed;
+  const maxRetries = options.maxRetries;
+  const timeoutMs = options.timeoutMs;
   if (temperature !== undefined && (typeof temperature !== 'number' || !Number.isFinite(temperature))) {
     throw new Error('options.temperature must be a finite number.');
   }
   if (maxTokens !== undefined && (typeof maxTokens !== 'number' || !Number.isInteger(maxTokens) || maxTokens < 1)) {
     throw new Error('options.maxTokens must be a positive integer.');
   }
+  for (const [name, value] of [
+    ['topP', topP],
+    ['topK', topK],
+    ['presencePenalty', presencePenalty],
+    ['frequencyPenalty', frequencyPenalty],
+    ['seed', seed],
+  ] as const) {
+    if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) {
+      throw new Error(`options.${name} must be a finite number.`);
+    }
+  }
+  if (
+    maxRetries !== undefined &&
+    (typeof maxRetries !== 'number' || !Number.isInteger(maxRetries) || maxRetries < 0 || maxRetries > 3)
+  ) {
+    throw new Error('options.maxRetries must be an integer between 0 and 3.');
+  }
+  if (
+    timeoutMs !== undefined &&
+    (typeof timeoutMs !== 'number' || !Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 120000)
+  ) {
+    throw new Error('options.timeoutMs must be an integer between 1000 and 120000.');
+  }
+  if (
+    stopSequences !== undefined &&
+    (!Array.isArray(stopSequences) || !stopSequences.every((value) => typeof value === 'string'))
+  ) {
+    throw new Error('options.stopSequences must be an array of strings.');
+  }
   return {
     messages: body.messages,
     options: {
       ...(temperature === undefined ? {} : { temperature }),
       ...(maxTokens === undefined ? {} : { maxTokens }),
+      ...(topP === undefined ? {} : { topP: topP as number }),
+      ...(topK === undefined ? {} : { topK: topK as number }),
+      ...(presencePenalty === undefined ? {} : { presencePenalty: presencePenalty as number }),
+      ...(frequencyPenalty === undefined ? {} : { frequencyPenalty: frequencyPenalty as number }),
+      ...(stopSequences === undefined ? {} : { stopSequences: stopSequences as string[] }),
+      ...(seed === undefined ? {} : { seed: seed as number }),
+      ...(maxRetries === undefined ? {} : { maxRetries: maxRetries as number }),
+      ...(timeoutMs === undefined ? {} : { timeoutMs: timeoutMs as number }),
     },
   };
 };

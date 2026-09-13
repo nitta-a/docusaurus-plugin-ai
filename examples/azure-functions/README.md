@@ -103,7 +103,8 @@ or an authenticated API gateway for production deployments.
 ## Security and operations
 
 `src/validation.ts` rejects empty or oversized prompts, more than 20 messages,
-`maxTokens` values above 2000, temperatures outside `0..2`, and total prompt
+`maxTokens` values above 2000, temperatures outside `0..2`, invalid common
+generation controls, client-supplied `providerOptions`, and total prompt
 content above 20,000 characters. Safe defaults of 800 output tokens and a
 temperature of `0.2` are applied when callers omit those controls. The handler
 uses these limits before invoking Azure OpenAI. `src/telemetry.ts` writes
@@ -128,6 +129,6 @@ AD login route. Keep `/api/*` excluded from the Docusaurus SPA fallback.
 Deployment checklist:
 
 1. Place `staticwebapp.config.json` in the Static Web Apps output and enable Entra ID authentication.
-2. Keep `validateAIRequest` enabled so message count, prompt length, `maxTokens`, and `temperature` limits are enforced.
+2. Keep `validateAIRequest` enabled so message count, prompt length, generation-control, and client-option limits are enforced.
 3. Use `locale` for document language and `codeLanguage` only for fenced-code language metadata.
 4. Load documents with `maxChunkChars` and `chunkOverlap` so prose is split at natural boundaries.
